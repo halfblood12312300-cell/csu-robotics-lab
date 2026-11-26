@@ -10,7 +10,7 @@ const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const args = process.argv.slice(2);
 if (args.includes("--help")) {
   console.log("node backend/scripts/setup-secrets.mjs [--local] [--config backend/wrangler.jsonc]");
-  console.log("Generates a 256-bit administrator access key. Saves only its SHA-256 hash and a separate media signing secret.");
+  console.log("Generates a 256-bit administrator access key and saves only its SHA-256 hash. A media signing secret is added only when the config binds R2 as BUCKET.");
   console.log("The access key is shown once in your terminal after setup succeeds. Save it in your password manager.");
   console.log("Running again rotates the key and invalidates existing administrator sessions.");
   process.exit(0);
@@ -27,11 +27,16 @@ for (let i = 0; i < args.length; i++) {
 }
 if (!existsSync(config)) throw new Error("Copy backend/wrangler.example.jsonc to backend/wrangler.jsonc and configure your D1 database first.");
 if (process.env.CI) throw new Error("Run secret setup interactively on your own computer, not in CI.");
+const configText = readFileSync(config, "utf8");
+let configuration;
+try { configuration = JSON.parse(configText); }
+catch { throw new Error("Secret setup expects the standard JSON format used by this repository's config files. Remove JSONC comments before running this helper, or configure secrets in the Cloudflare dashboard."); }
+const hasMediaStorage = Array.isArray(configuration.r2_buckets) && configuration.r2_buckets.some((binding) => binding.binding === "BUCKET");
 
 const accessKey = "csu_admin_" + randomBytes(32).toString("base64url");
 const secrets = {
   ADMIN_KEY_HASH: createHash("sha256").update(accessKey, "utf8").digest("base64url"),
-  MEDIA_SIGNING_SECRET: randomBytes(32).toString("base64url"),
+  ...(hasMediaStorage ? { MEDIA_SIGNING_SECRET: randomBytes(32).toString("base64url") } : {}),
 };
 
 if (local) {
@@ -42,9 +47,9 @@ if (local) {
     .map(([name, value]) => `${name}=${JSON.stringify(value)}`).join("\n") + "\n";
   writeFileSync(filename, content, { mode: 0o600 });
   chmodSync(filename, 0o600);
-  console.log("Local development hashes and signing secret configured. No remote secrets were changed.");
+  console.log("Local administrator hash configured" + (hasMediaStorage ? " with the optional media signing secret." : ".") + " No remote secrets were changed.");
 } else {
-  if (readFileSync(config, "utf8").includes("REPLACE_WITH_D1_DATABASE_ID")) {
+  if (configText.includes("REPLACE_WITH_D1_DATABASE_ID")) {
     throw new Error("Set the actual database_id in your private backend/wrangler.jsonc before configuring production secrets.");
   }
   const wrangler = resolve(repository, "node_modules/wrangler/bin/wrangler.js");
@@ -61,7 +66,7 @@ if (local) {
       child.stdin.end(value + "\n");
     });
   }
-  console.log("Production administrator access and private-media preview secrets configured.");
+  console.log("Production administrator access configured" + (hasMediaStorage ? " with the optional private-media signing secret." : "."));
 }
 console.log("\nAdministrator access key (shown only here; store securely):\n" + accessKey);
 console.log("\nPaste this key into the website's 管理员访问密钥 field. Do not commit it, send it in a URL, or put it in frontend environment variables.");

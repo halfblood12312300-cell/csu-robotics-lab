@@ -1,4 +1,5 @@
 import type { Asset } from "./content";
+import { normalizeRepositoryMediaPath } from "./repository-media-path";
 
 const AUTH_EVENT = "csu-lab-auth-change";
 const CONTENT_EVENT = "csu-lab-content-change";
@@ -130,7 +131,8 @@ export function isCanonicalMediaUrl(value: string) { return canonicalMedia.test(
 
 export function mediaUrl(value: string | undefined): string | undefined {
   if (!value) return undefined;
-  if (/^\/media\/[a-zA-Z0-9_.-]+$/.test(value)) return publicAssetUrl(value);
+  const repositoryPath = normalizeRepositoryMediaPath(value);
+  if (repositoryPath) return publicAssetUrl(repositoryPath);
   if (/^\/api\/media\/[a-zA-Z0-9_.-]+(?:\?[^#]*)?$/.test(value)) {
     if (!apiBase) return undefined;
     const url = new URL(value, "https://media.local");

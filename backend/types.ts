@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
-  BUCKET: R2Bucket;
+  /** Optional. Public repository assets are served by GitHub Pages without R2. */
+  BUCKET?: R2Bucket;
   FRONTEND_ORIGIN: string;
   FRONTEND_BASE_PATH?: string;
   ADMIN_KEY_HASH?: string;

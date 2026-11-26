@@ -22,6 +22,8 @@ import { Frame, useSession } from "../ui";
 import { clearAdminSession, getAdminSession, isApiConfigured, loginAdmin, logoutAdmin } from "../api-client";
 import { navigate, useRoute } from "../router";
 import { Asset } from "../content";
+import repositoryAssets from "virtual:repository-media";
+import { MediaCapabilitiesContext, repositoryMediaFolder } from "./media-context";
 import { api, AdminData, Modal } from "./shared";
 import { Articles } from "./components/articles";
 import { Applications } from "./components/applications";
@@ -53,7 +55,11 @@ export default function Admin() {
     try {
       const d = await api("admin");
       if (!getAdminSession()) return;
-      setData(d);
+      setData({
+        ...d,
+        capabilities: { mediaUpload: d.capabilities?.mediaUpload === true },
+        assets: [...repositoryAssets, ...d.assets.map((asset: Asset) => ({ ...asset, source: "r2" as const }))],
+      });
       setError("");
       setDenied(false);
     } catch (e) {
@@ -206,11 +212,13 @@ export default function Admin() {
         </section>
       </Frame>
     );
+  const mediaUpload = data.capabilities?.mediaUpload === true;
   const published = data.articles.filter((a) => a.status === "published"),
     drafts = data.articles.filter((a) => a.status === "draft"),
     assets = data.assets.filter((a) => !a.archived),
     pending = data.applications.filter((a) => a.status === "待查看");
   return (
+    <MediaCapabilitiesContext.Provider value={{ mediaUpload }}>
     <div className="cms-shell">
       <aside className="cms-sidebar">
         <SiteLink href="/" className="brand cms-brand">
@@ -371,8 +379,8 @@ export default function Admin() {
                       <span>
                         <UploadCloud size={23} />
                       </span>
-                      <b>上传宣传素材</b>
-                      <small>批量上传图片和视频</small>
+                      <b>{mediaUpload ? "上传宣传素材" : "管理仓库素材"}</b>
+                      <small>{mediaUpload ? "批量上传图片和视频" : "从 GitHub 添加公开图片和短视频"}</small>
                       <ArrowUpRight size={18} />
                     </button>
                   </div>
@@ -380,7 +388,7 @@ export default function Admin() {
                 <section className="cms-panel workflow-guide">
                   <h2>一次发布，三步完成</h2>
                   {[
-                    ["01", "上传素材", "把照片或视频放进素材库"],
+                    ["01", mediaUpload ? "上传素材" : "添加公开素材", mediaUpload ? "把照片或视频放进素材库" : "在 GitHub 仓库添加图片或短视频"],
                     ["02", "编辑与预览", "写正文、选封面，检查展示效果"],
                     ["03", "确认发布", "草稿转为发布后，展示在网站中"],
                   ].map(([n, t, d]) => (
@@ -507,9 +515,16 @@ export default function Admin() {
               在“文章管理”新建文章，填写标题、摘要与正文。可用工具栏插入小标题、加粗、图片或视频。先保存草稿，再使用预览检查，最后发布。已发布文章可以撤回为草稿，草稿可以移入回收站并恢复。
             </p>
             <h3>管理图片与视频</h3>
+            {mediaUpload && <p>
+              在线素材库支持多选、拖放上传：图片最大20MB，视频最大500MB。上传后选入文章或首页即可展示；回收站保留原文件和已有引用。
+            </p>}
             <p>
-              素材库支持多选、拖放上传：图片最大20MB，视频最大500MB，视频支持MP4和WebM。上传时保持页面打开，推荐使用浏览器兼容性较好的MP4（H.264视频与AAC音频）。上传后还需选入文章或首页，才会向访客展示。回收站中的素材保留原文件，已有引用不会失效。
+              仓库素材请放到 GitHub 的 public/media 文件夹，选择 Add file → Upload files 并提交到 main。等待 Pages 发布成功后，刷新后台，文件会自动出现在素材库，可选入正文、封面或首页视频。支持图片与 MP4/WebM 短视频，网页上传单个文件不超过25 MiB。
             </p>
+            <p>
+              仓库文件公开可见，即使只选入草稿也不会变成私有文件。仓库中的文件名、替换和删除在 GitHub 中管理；替换后沿用原文件名可保留引用，删除前请先检查文章和首页是否仍在使用。
+            </p>
+            <a className="text-link" href={repositoryMediaFolder} target="_blank" rel="noreferrer">打开仓库素材文件夹 <ArrowUpRight size={15} /></a>
             <h3>设置首页与报名</h3>
             <p>
               在“网站设置”选择首页图片或宣传视频，修改实验室简介、地点与招新信息。开启在线报名后，报名记录会出现在“报名管理”，可以搜索、备注和导出。
@@ -522,5 +537,6 @@ export default function Admin() {
         </Modal>
       )}
     </div>
+    </MediaCapabilitiesContext.Provider>
   );
 }

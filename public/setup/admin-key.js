@@ -50,7 +50,7 @@
       mediaSecretField.value = base64url(signingBytes);
       for (const button of copyButtons) button.disabled = false;
       generateButton.textContent = "重新生成一组密钥";
-      status.textContent = "已在当前浏览器中生成。请先保存访问密钥，再将两项 Secret 填入 Cloudflare。";
+      status.textContent = "已在当前浏览器中生成。请保存访问密钥，将 ADMIN_KEY_HASH 填入 Cloudflare；未启用 R2 时跳过第三项。";
     } catch {
       if (generation === currentGeneration) {
         status.textContent = "浏览器未能生成密钥。请使用支持 Web Crypto 的浏览器，通过 HTTPS 打开本页。";

@@ -31,6 +31,12 @@ export class MediaError extends Error {
     this.status = status;
   }
 }
+export function requireMediaStorage(runtime: Runtime): R2Bucket {
+  if (!runtime.BUCKET) {
+    throw new MediaError("当前通过 GitHub 仓库维护素材，请将图片和视频上传到仓库的 public/media 目录。", 503);
+  }
+  return runtime.BUCKET;
+}
 export async function assetView(runtime: Runtime, row: any) {
   return {
     ...row,
@@ -41,6 +47,7 @@ export async function assetView(runtime: Runtime, row: any) {
   };
 }
 export async function listAssets(runtime: Runtime) {
+  if (!runtime.BUCKET) return [];
   return Promise.all((
     await runtime.DB.prepare(
       "SELECT * FROM media_assets ORDER BY created_at DESC",
@@ -105,6 +112,7 @@ async function ownedUpload(runtime: Runtime, id: string, owner: string) {
   return row;
 }
 export async function uploadChunk(runtime: Runtime, request: Request, owner: string) {
+  const bucket = requireMediaStorage(runtime);
   const url = new URL(request.url);
   const id = url.searchParams.get("id") || "";
   const part = Number(url.searchParams.get("part"));
@@ -127,7 +135,7 @@ export async function uploadChunk(runtime: Runtime, request: Request, owner: str
   if (bytes.length !== expected) throw new MediaError("分段不完整，请重试");
   if (part === 1 && !validMagic(row.mime, bytes))
     throw new MediaError("文件内容与格式不符");
-  const uploaded = await runtime.BUCKET.resumeMultipartUpload(
+  const uploaded = await bucket.resumeMultipartUpload(
     id,
     row.upload_id,
   ).uploadPart(part, bytes);
@@ -143,6 +151,7 @@ export async function mediaAction(
   body: unknown,
   owner: string,
 ) {
+  const bucket = requireMediaStorage(runtime);
   if (key === "admin/media/start") {
     const b = z
       .object({
@@ -165,7 +174,7 @@ export async function mediaAction(
     if (b.mime.startsWith("image/") && b.size > 20 * 1024 * 1024)
       throw new MediaError("图片最大20MB");
     const id = crypto.randomUUID() + "." + formats[b.mime];
-    const upload = await runtime.BUCKET.createMultipartUpload(id, {
+    const upload = await bucket.createMultipartUpload(id, {
       httpMetadata: { contentType: b.mime },
     });
     await runtime.DB.prepare(
@@ -197,8 +206,8 @@ export async function mediaAction(
     if (parts.length !== Math.ceil(row.size / CHUNK_SIZE))
       throw new MediaError("文件尚未上传完成");
     const file =
-      (await runtime.BUCKET.head(id)) ??
-      (await runtime.BUCKET.resumeMultipartUpload(id, row.upload_id).complete(
+      (await bucket.head(id)) ??
+      (await bucket.resumeMultipartUpload(id, row.upload_id).complete(
         parts,
       ));
     if (file.size !== row.size) throw new MediaError("文件大小校验失败");
@@ -222,7 +231,7 @@ export async function mediaAction(
   if (key === "admin/media/cancel") {
     const { id } = z.object({ id: z.string().max(100) }).parse(body);
     const row = await ownedUpload(runtime, id, owner);
-    await runtime.BUCKET.resumeMultipartUpload(id, row.upload_id).abort();
+    await bucket.resumeMultipartUpload(id, row.upload_id).abort();
     await runtime.DB.prepare("DELETE FROM media_uploads WHERE id=?")
       .bind(id)
       .run();

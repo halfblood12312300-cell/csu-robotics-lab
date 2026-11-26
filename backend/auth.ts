@@ -45,7 +45,7 @@ function signingSecret(env: Env): Uint8Array {
 
 export function requireAuthConfiguration(env: Env): void {
   parseAccessKeyHash(env.ADMIN_KEY_HASH);
-  signingSecret(env);
+  if (env.BUCKET) signingSecret(env);
 }
 
 /** Only the 256-bit generated access-key format is accepted, never a chosen password. */

@@ -1,6 +1,6 @@
 # 部署说明
 
-本文中的命令均在仓库根目录执行。GitHub Pages 发布前端；Cloudflare Workers 执行 API，使用独立 D1 数据库与 R2 存储桶。所有账号、资源 ID 和最终访问地址以服务实际返回的结果为准。
+本文中的命令均在仓库根目录执行。GitHub Pages 发布前端和 `public/media/` 内的公开图片、短视频；Cloudflare Workers 执行 API，使用独立 D1 数据库。默认生产配置不绑定 R2。所有账号、资源 ID 和最终访问地址以服务实际返回的结果为准。
 
 **希望只使用自己的普通浏览器操作：** 参见 [Cloudflare 控制台部署](cloudflare-browser.md)。该流程使用同一个 GitHub 仓库和 Cloudflare Workers Builds，不要求对话内浏览器具备登录状态。以下保留本机命令行部署流程。
 
@@ -26,15 +26,14 @@ npx wrangler login
 
 `wrangler login` 由账号持有人在浏览器完成 Cloudflare 授权。不需要把 Cloudflare 登录密码或 API Token 发送到聊天、网页表单或提交到 GitHub。
 
-先复制生产配置，再创建资源：
+先复制不含 R2 的生产配置，再检查数据库：
 
 ```bash
 cp backend/wrangler.example.jsonc backend/wrangler.jsonc
-npx wrangler d1 create csu-robotics-lab
-npx wrangler r2 bucket create csu-robotics-media
+npx wrangler d1 list --json
 ```
 
-将 D1 命令返回的 `database_id` 填入 `backend/wrangler.jsonc` 对应项。若存储桶实际名称不同，同步修改 `r2_buckets` 中的 `bucket_name`。保留绑定名 `DB` 和 `BUCKET`。配置中的 `REPLACE_WITH_D1_DATABASE_ID` 是明确占位符，必须替换；不能使用本地测试的虚拟 UUID 部署生产。
+如果列表已有 `csu-robotics-lab`，复用它的 `uuid`；仅在不存在时执行 `npx wrangler d1 create csu-robotics-lab`。将真实 UUID 填入 `backend/wrangler.jsonc` 的 `database_id`，保留绑定名 `DB`。配置中的 `REPLACE_WITH_D1_DATABASE_ID` 必须替换，不能使用本地测试的虚拟 UUID 部署生产。默认模式不用创建存储桶。
 
 生产允许的前端来源为：
 
@@ -52,11 +51,11 @@ npx wrangler deploy --config backend/wrangler.jsonc
 node backend/scripts/setup-secrets.mjs --config backend/wrangler.jsonc
 ```
 
-初始化脚本生成 32 字节密码学随机值作为管理员访问密钥，只把它的 SHA-256 摘要 `ADMIN_KEY_HASH` 和随机 `MEDIA_SIGNING_SECRET` 通过标准输入交给 Wrangler。成功后，原始访问密钥仅在执行者的终端显示一次，请保存到自己的密码管理器；登录后台时粘贴该密钥。原始密钥和两个后端 Secret 都不进入 GitHub 或前端构建。未初始化 Secret 时后台登录保持关闭；重新运行脚本会轮换密钥并使旧登录会话失效。
+初始化脚本生成 32 字节密码学随机值作为管理员访问密钥，默认仅把它的 SHA-256 摘要 `ADMIN_KEY_HASH` 通过标准输入交给 Wrangler。只有配置中存在 `BUCKET` 的 R2 绑定时，脚本才另外生成并设置 `MEDIA_SIGNING_SECRET`。成功后，原始访问密钥仅在执行者的终端显示一次，请保存到自己的密码管理器；登录后台时粘贴该密钥。原始密钥和后端 Secret 都不进入 GitHub 或前端构建。未初始化管理员 Secret 时后台登录保持关闭；重新运行脚本会轮换管理员密钥并使旧登录会话失效。
 
-保存 `wrangler deploy` 实际输出的 HTTPS 地址。不要把文档中的示例主机名当作已部署地址。D1 迁移命令的行为参见 [Cloudflare D1 命令](https://developers.cloudflare.com/workers/wrangler/commands/d1/)；创建存储桶参见 [R2 命令](https://developers.cloudflare.com/workers/wrangler/commands/r2/)；Secret 存储参见 [Workers Secrets](https://developers.cloudflare.com/workers/configuration/secrets/)。
+保存 `wrangler deploy` 实际输出的 HTTPS 地址。不要把文档中的示例主机名当作已部署地址。D1 迁移命令的行为参见 [Cloudflare D1 命令](https://developers.cloudflare.com/workers/wrangler/commands/d1/)；Secret 存储参见 [Workers Secrets](https://developers.cloudflare.com/workers/configuration/secrets/)。
 
-GitHub Pages 与后端是两项独立服务。后端的资源额度、R2 启用条件与 Workers CPU 限制取决于实际 Cloudflare 账号；部署后应检查登录和上传是否正常。本文不预设付费计划，也不承诺所有流量或存储都无费用。
+GitHub Pages 与后端是两项独立服务。当前选择不使用 R2，避免把素材存储订阅作为部署前提；Workers、D1 和 GitHub Pages 仍各有资源额度。部署后检查实际账号计划和运行结果，不预设付费升级，也不承诺无限流量或容量。
 
 ## 三、连接前端与后端
 
@@ -84,8 +83,8 @@ VITE_API_BASE_URL=https://<实际的 Worker 主机名>
 
 1. 主页、四个研究方向、文章及设备图片正常显示。
 2. 顶部“加入我们”进入报名页面，其他展示模块不跳报名。
-3. 管理员能登录、保存草稿、预览上传文件、发布和撤回文章。
-4. 未发布素材没有公开引用时，普通访客无法直接读取。
+3. 管理员能登录、保存草稿、选择仓库素材、发布和撤回文章。
+4. 仓库图片能显示、短视频能播放；确认维护者知道仓库素材本身公开，不受文章草稿权限保护。
 5. 确认后台设置后再开启报名；用明确标记的测试报名检查保存、筛选和导出。
 
 ## 四、本地开发
@@ -106,9 +105,11 @@ VITE_API_BASE_URL=http://localhost:8787 npm run dev -- --host localhost --port 5
 
 使用终端输出的 `http://localhost:5173/...` 地址访问；本地允许来源以配置中的 `FRONTEND_ORIGIN` 为准。若改用其他主机名或端口，需对应调整本地配置。`backend/.dev.vars` 仅用于本地 Secret，已排除在 Git 提交之外。
 
+当前本地配置也不绑定 R2，与默认生产模式一致。自动化测试中的模拟存储桶另行覆盖可选 R2 模式，不需要开通真实 R2 服务。
+
 ## 五、更新、诊断与回退
 
-前端更新提交到 `main` 后，由 Pages 工作流发布；后端代码更新需要重新执行 Worker 部署。只有新增数据库迁移时才应用新的迁移，已部署的 SQL 迁移不得改写。数据库与资源配置项使用 [Wrangler 官方配置](https://developers.cloudflare.com/workers/wrangler/configuration/)定义。
+前端或仓库素材更新提交到 `main` 后，由 Pages 工作流发布；连接 Workers Builds 后，后端按其构建设置自动部署，使用本机部署的项目则重新执行 Worker 部署。只有新增数据库迁移时才应用新的迁移，已部署的 SQL 迁移不得改写。数据库与资源配置项使用 [Wrangler 官方配置](https://developers.cloudflare.com/workers/wrangler/configuration/)定义。
 
 | 现象 | 先检查 |
 | --- | --- |
@@ -116,7 +117,15 @@ VITE_API_BASE_URL=http://localhost:8787 npm run dev -- --host localhost --port 5
 | 首页能看但报名未启用 | 是否设置了实际后端地址并重新构建；后台是否打开报名开关 |
 | API 请求失败或被跨域拒绝 | 后端 URL、HTTPS、`FRONTEND_ORIGIN` 与浏览器实际 Origin 是否一致 |
 | 管理员无法登录 | Secret 是否初始化、访问密钥是否完整、Worker 日志和实际请求额度 |
-| 上传失败 | R2 绑定、文件类型/大小、分段请求及 Worker 日志 |
+| 仓库新素材未出现 | 文件是否位于 `public/media/`、格式是否支持、该次 Pages 发布是否成功、后台是否已刷新 |
+| 网站后台没有直接上传按钮 | 默认使用仓库素材，按 [仓库素材维护](repository-media.md) 在 GitHub 上传 |
+| 最新构建仍要求启用 R2 | 是否实际构建了旧提交，或部署命令仍指向含 `r2_buckets` 的旧配置 |
 | 刷新文章或研究页面异常 | 是否保留 `#/...` 路由及 `/csu-robotics-lab/` 构建基础路径 |
 
 回退前端可以恢复已知可用的源码提交并重新运行 Pages。后端代码回退不等于数据库回退；先核对迁移兼容性与数据备份。旧站数据切换步骤见 [migration-status.md](migration-status.md)。
+
+## 六、将来可选启用 R2
+
+只有需要在网站后台直接上传较大文件、并让未发布素材保持私有时，才需要这个可选模式。先由账号持有人在 Cloudflare 控制台完成 R2 开通，再为实际部署配置添加名为 `BUCKET` 的 R2 绑定，并设置运行时 Secret `MEDIA_SIGNING_SECRET`。如使用本机初始化脚本，带 `BUCKET` 绑定重新运行会同时轮换管理员访问密钥，请按脚本提示保存新值。
+
+R2 开通、额度和计费参见 [Cloudflare R2 入门](https://developers.cloudflare.com/r2/get-started/)。不要为解决旧提交中的 `10042` 报错而被动开通：默认无 R2 版本应先检查是否部署了最新配置。即使将来启用 R2，仓库里的素材仍然是公开的，不会自动迁移或获得私有权限。

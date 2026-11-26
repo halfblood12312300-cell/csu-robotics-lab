@@ -10,12 +10,27 @@ import {
   Check,
   Loader2,
   X,
+  FolderOpen,
+  ExternalLink,
+  Copy,
 } from "lucide-react";
 import { Asset } from "../../content";
-import { apiFetch } from "../../api-client";
+import { apiFetch, mediaUrl } from "../../api-client";
 import { api, formatSize, dateLabel, Modal } from "../shared";
+import { repositoryMediaFile, repositoryMediaFolder, useMediaCapabilities } from "../media-context";
 const imageTypes = "image/jpeg,image/png,image/webp,image/gif";
 const accept = imageTypes + ",video/mp4,video/webm";
+function RepositoryMediaNotice({ compact = false }: { compact?: boolean }) {
+  return <div className={"repository-media-notice " + (compact ? "compact" : "")}>
+    <FolderOpen size={24} />
+    <div>
+      <b>通过 GitHub 添加图片和短视频</b>
+      <p>打开 public/media 文件夹，选择 Add file → Upload files。提交到 main，等待网站发布完成后刷新本页，即可在素材库选用。</p>
+      <small>网页上传单个文件 ≤ 25 MiB。仓库素材公开可见，请仅上传可公开的内容。</small>
+    </div>
+    <a className="button small" href={repositoryMediaFolder} target="_blank" rel="noreferrer">打开素材文件夹 <ExternalLink size={14} /></a>
+  </div>;
+}
 export function UploadArea({
   onDone,
   kind = "both",
@@ -25,6 +40,7 @@ export function UploadArea({
   kind?: "both" | "image" | "video";
   compact?: boolean;
 }) {
+  const { mediaUpload } = useMediaCapabilities();
   const input = useRef<HTMLInputElement>(null);
   const controller = useRef<AbortController | null>(null);
   const locked = useRef(false);
@@ -45,7 +61,7 @@ export function UploadArea({
     return () => window.removeEventListener("beforeunload", before);
   }, [busy]);
   async function upload(files: FileList | File[] | null) {
-    if (!files?.length || locked.current) return;
+    if (!mediaUpload || !files?.length || locked.current) return;
     locked.current = true;
     setBusy(true);
     setError("");
@@ -143,6 +159,7 @@ export function UploadArea({
       if (input.current) input.current.value = "";
     }
   }
+  if (!mediaUpload) return <RepositoryMediaNotice compact={compact} />;
   return (
     <div
       data-uploading={busy}
@@ -253,6 +270,7 @@ export function AssetPicker({
   onClose: () => void;
   onUpload: (a: Asset) => void;
 }) {
+  const { mediaUpload } = useMediaCapabilities();
   const [q, setQ] = useState("");
   const rows = assets.filter(
     (a) =>
@@ -283,13 +301,13 @@ export function AssetPicker({
             <AssetThumb asset={a} />
             <div className="asset-info">
               <b>{a.name}</b>
-              <small>{formatSize(a.size)}</small>
+              <small>{formatSize(a.size)}{a.source === "repository" ? " · 仓库公开素材" : ""}</small>
             </div>
           </button>
         ))}
       </div>
       {!rows.length && (
-        <div className="empty">暂无可选素材，先上传一个文件吧。</div>
+        <div className="empty">{mediaUpload ? "暂无可选素材，先上传一个文件吧。" : "暂无匹配素材。将文件提交到仓库，等待网站发布完成后刷新本页。"}</div>
       )}
     </Modal>
   );
@@ -305,6 +323,7 @@ export function MediaLibrary({
   onRefresh: () => Promise<void>;
   notify: (s: string) => void;
 }) {
+  const { mediaUpload } = useMediaCapabilities();
   const [q, setQ] = useState("");
   const [type, setType] = useState("all");
   const [archived, setArchived] = useState(false);
@@ -317,6 +336,7 @@ export function MediaLibrary({
       `${a.name}${a.caption}`.toLowerCase().includes(q.toLowerCase()),
   );
   async function save(a: Asset) {
+    if (a.source === "repository") return;
     setBusy(true);
     try {
       await api("admin/media/update", { id: a.id, name: a.name, caption: a.caption, archived: a.archived });
@@ -333,12 +353,22 @@ export function MediaLibrary({
       setBusy(false);
     }
   }
+  function publishedUrl(asset: Asset) {
+    const path = mediaUrl(asset.url);
+    return path ? new URL(path, window.location.href).href : "";
+  }
+  async function copyUrl(asset: Asset) {
+    try {
+      await navigator.clipboard.writeText(publishedUrl(asset));
+      notify("已复制公开素材网址");
+    } catch { notify("浏览器未允许自动复制，请从素材详情中的网址输入框手动复制。"); }
+  }
   return (
     <>
       <div className="cms-heading">
         <div>
           <h1>素材库</h1>
-          <p>集中保存宣传视频和图片，在文章与首页中反复选用。</p>
+          <p>在文章与首页中选用图片和短视频。仓库素材随网站发布，可公开访问。</p>
         </div>
       </div>
       <UploadArea onDone={onUpload} />
@@ -361,13 +391,13 @@ export function MediaLibrary({
           <option value="image">图片</option>
           <option value="video">视频</option>
         </select>
-        <button
+        {(mediaUpload || assets.some((asset) => asset.source !== "repository")) && <button
           className={"button small " + (archived ? "" : "outline")}
           onClick={() => setArchived(!archived)}
         >
           <Archive size={15} />
           {archived ? "返回素材库" : "回收站"}
-        </button>
+        </button>}
       </div>
       <div className="asset-grid">
         {rows.map((a) => (
@@ -380,7 +410,7 @@ export function MediaLibrary({
             <div className="asset-info">
               <b>{a.name}</b>
               <small>
-                {formatSize(a.size)} · {dateLabel(a.created_at)}
+                {formatSize(a.size)} · {a.source === "repository" ? "仓库公开素材" : dateLabel(a.created_at)}
               </small>
             </div>
           </button>
@@ -396,7 +426,7 @@ export function MediaLibrary({
                 ? "回收站为空"
                 : "素材库还是空的"}
           </h3>
-          <p>上传的文件会保存在这里；只有选入已发布内容后才向访客展示。</p>
+          <p>{mediaUpload ? "上传后可从这里选择素材。仓库来源的文件始终公开。" : "在 GitHub 添加素材并完成网站发布后，刷新本页即可选用。"}</p>
         </div>
       )}
       {selected && (
@@ -414,9 +444,17 @@ export function MediaLibrary({
             )}
           </div>
           <p className="muted">
-            {formatSize(selected.size)} · 上传于{" "}
-            {dateLabel(selected.created_at)}
+            {formatSize(selected.size)} · {selected.source === "repository" ? "仓库公开素材" : "上传于 " + dateLabel(selected.created_at)}
           </p>
+          {selected.source === "repository" ? <>
+            <label>仓库文件名<input readOnly value={selected.name} /></label>
+            <label>公开文件地址<input readOnly value={publishedUrl(selected)} onFocus={(event) => event.currentTarget.select()} /></label>
+            <p className="notice">文件随仓库公开发布。替换、改名和删除请在 GitHub 中操作，发布完成后刷新后台。素材在文章中的说明可在文章编辑器填写。</p>
+            <div className="cms-actions">
+              <button type="button" className="button small" onClick={() => void copyUrl(selected)}><Copy size={15} />复制网址</button>
+              <a className="button small outline" href={repositoryMediaFile(selected)} target="_blank" rel="noreferrer"><FolderOpen size={15} />在 GitHub 管理</a>
+            </div>
+          </> : <>
           <label>
             素材名称
             <input
@@ -462,6 +500,7 @@ export function MediaLibrary({
               {selected.archived ? "恢复素材" : "移入回收站"}
             </button>
           </div>
+          </>}
         </Modal>
       )}
     </>

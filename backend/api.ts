@@ -1,15 +1,16 @@
 import { z } from "zod";
 import { initialArticles, defaultSettings } from "../app/content.ts";
+import { normalizeRepositoryMediaPath } from "../app/repository-media-path.ts";
 import { ApiError, type Env } from "./types.ts";
 import { json, readJson } from "./http.ts";
 import {
   authenticate, createPreviewUrl, issueSession, rateLimited, requireAdmin,
   requireAuthConfiguration, revokeSession, verifyAccessKey, verifyPreviewUrl,
 } from "./auth.ts";
-import { listAssets, mediaAction, uploadChunk } from "./media.ts";
+import { listAssets, mediaAction, requireMediaStorage, uploadChunk } from "./media.ts";
 
 const safeUrl = z.string().max(2000).refine((s) => {
-  if (!s || /^\/media\/[a-zA-Z0-9_.-]+$/.test(s) || /^\/api\/media\/[a-zA-Z0-9_.-]+$/.test(s)) return true;
+  if (!s || normalizeRepositoryMediaPath(s) || /^\/api\/media\/[a-zA-Z0-9_.-]+$/.test(s)) return true;
   try {
     const u = new URL(s);
     return ["http:", "https:"].includes(u.protocol) && !u.username && !u.password;
@@ -56,6 +57,10 @@ export async function getArticles(env: Env, all = false) {
 /** Store stable media paths; never persist short-lived preview signatures. */
 export function canonicalMediaUrl(value: unknown, origin: string): unknown {
   if (typeof value !== "string") return value;
+  const repositoryPath = normalizeRepositoryMediaPath(value);
+  if (repositoryPath) return repositoryPath;
+  // Do not let URL normalization turn a rejected repository traversal into another endpoint.
+  if (value.startsWith("/media/")) return value;
   try {
     const url = new URL(value, origin);
     if (url.origin === origin && /^\/api\/media\/[a-zA-Z0-9_.-]+$/.test(url.pathname)) return url.pathname;
@@ -84,6 +89,7 @@ async function publiclyReferenced(env: Env, id: string): Promise<boolean> {
 }
 
 async function serveMedia(request: Request, env: Env, id: string) {
+  if (!env.BUCKET) return json({ error: "素材不存在" }, 404);
   if (!/^[a-zA-Z0-9_.-]{1,100}$/.test(id)) return json({ error: "素材不存在" }, 404);
   const publicAsset = await publiclyReferenced(env, id);
   if (!publicAsset && !await authenticate(request, env) && !await verifyPreviewUrl(env, new URL(request.url), id)) {
@@ -118,8 +124,10 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
     if (key === "data") return json({ settings: await getSettings(env), articles: await getArticles(env) });
     if (key === "admin" || key.startsWith("admin/")) {
       await requireAdmin(request, env);
+      if (key.startsWith("admin/media/")) requireMediaStorage(env);
       if (key !== "admin") return json({ error: "页面不存在" }, 404);
       return json({
+        capabilities: { mediaUpload: !!env.BUCKET },
         assets: await listAssets(env), settings: await getSettings(env), articles: await getArticles(env, true),
         applications: (await env.DB.prepare("SELECT * FROM applications ORDER BY created_at DESC").all()).results
           .map((r: any) => ({ ...r, directions: JSON.parse(r.directions) })),
@@ -145,6 +153,7 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
 
   // Authorize before parsing request bodies, including all multipart chunk calls.
   const admin = (key === "admin" || key.startsWith("admin/")) ? await requireAdmin(request, env) : null;
+  if (key.startsWith("admin/media/")) requireMediaStorage(env);
   if (key === "admin/media/chunk") return json(await uploadChunk(env, request, admin!.tokenHash));
   const body = await readJson(request);
   if (key === "admin/media/preview") {

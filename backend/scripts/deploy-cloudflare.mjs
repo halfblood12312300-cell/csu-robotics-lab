@@ -71,7 +71,7 @@ async function main() {
   }
   if (args.includes("--help")) {
     console.log("node backend/scripts/deploy-cloudflare.mjs [--help | --plan]");
-    console.log("默认：复用或创建指定 D1 数据库，应用迁移，部署 Worker；R2 由 Wrangler 自动配置。");
+    console.log("默认：复用或创建指定 D1 数据库，应用迁移，部署 Worker。素材由 GitHub Pages 提供，无需 R2。");
     console.log("--plan：仅显示步骤，不访问网络、不写文件、不调用 Wrangler。");
     console.log("本脚本不读取、生成或修改管理员 Secret。请先在 Cloudflare Workers Builds 配置部署授权。");
     return;
@@ -84,6 +84,7 @@ async function main() {
     throw new Error("根目录配置必须包含唯一的 DB 绑定，数据库名为 csu-robotics-lab。");
   }
   const databaseName = bindings[0].database_name;
+  const hasR2 = Array.isArray(config.r2_buckets) && config.r2_buckets.length > 0;
   if (config.name !== "csu-robotics-api" || config.main !== "backend/index.ts" || bindings[0].migrations_dir !== "backend/migrations") {
     throw new Error("Worker 名称、入口或迁移目录不符合本项目配置，请先核对根目录 wrangler.jsonc。");
   }
@@ -94,7 +95,7 @@ async function main() {
     console.log(`2. 仅在不存在时：d1 create ${databaseName} --no-update-config --config wrangler.jsonc，然后重新读取列表。`);
     console.log("3. 临时生成 wrangler.builds.generated.jsonc，填入实际 D1 uuid。");
     console.log("4. d1 migrations apply DB --remote --config wrangler.builds.generated.jsonc");
-    console.log("5. deploy --config wrangler.builds.generated.jsonc（Wrangler 自动复用或创建指定 R2 存储桶）。");
+    console.log("5. deploy --config wrangler.builds.generated.jsonc" + (hasR2 ? "（按配置连接可选 R2 存储桶）。" : "（仅 Worker 与 D1，不创建 R2 存储桶）。"));
     console.log("6. 清理临时配置；不读取或修改 Worker Secret。");
     return;
   }
@@ -127,7 +128,7 @@ async function main() {
     await runWrangler(
       ["d1", "migrations", "apply", "DB", "--remote", "--config", generatedConfig], "应用 D1 数据库迁移",
     );
-    await runWrangler(["deploy", "--config", generatedConfig], "部署 Worker 与配置 R2");
+    await runWrangler(["deploy", "--config", generatedConfig], hasR2 ? "部署 Worker 与配置 R2" : "部署 Worker");
     console.log("后端部署命令已成功完成，请保存 Wrangler 上方输出的实际 Worker 地址。");
     console.log("管理员 Secret 由控制台单独维护，本脚本没有读取或修改它们。");
   } finally {

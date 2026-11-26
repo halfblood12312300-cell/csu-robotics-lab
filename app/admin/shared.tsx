@@ -21,6 +21,7 @@ export type AdminData = {
   articles: Article[];
   applications: Application[];
   assets: Asset[];
+  capabilities?: { mediaUpload: boolean };
 };
 export const states = ["待查看", "已联系", "待交流", "已录取", "暂不合适"];
 export const categories = [

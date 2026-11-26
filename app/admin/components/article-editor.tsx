@@ -18,6 +18,7 @@ import { Article, Asset, Media } from "../../content";
 import { ArticleBody } from "../../ui";
 import { AssetPicker, UploadArea } from "./media-library";
 import { api, categories, Modal } from "../shared";
+import { useMediaCapabilities } from "../media-context";
 export function ArticlePreview({ article }: { article: Article }) {
   return (
     <article className="cms-article-preview">
@@ -63,6 +64,7 @@ export function ArticleEditor({
   onSaved: () => Promise<void>;
   onClose: () => void;
 }) {
+  const { mediaUpload } = useMediaCapabilities();
   const [a, setA] = useState<Article>(initial);
   const [saved, setSaved] = useState(JSON.stringify(initial));
   const [preview, setPreview] = useState(false);
@@ -390,8 +392,8 @@ export function ArticleEditor({
             </div>
           </section>
           <section className="cms-panel">
-            <h3>上传素材</h3>
-            <p className="muted">上传后可从素材库选入正文、封面或相册。</p>
+            <h3>{mediaUpload ? "上传素材" : "添加仓库素材"}</h3>
+            <p className="muted">从素材库选入正文、封面或相册。</p>
             <UploadArea compact onDone={onUpload} />
           </section>
         </aside>

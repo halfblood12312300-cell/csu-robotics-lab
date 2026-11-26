@@ -44,6 +44,7 @@ export type Asset = {
   preview_url?: string;
   expiresAt?: number;
   type: "image" | "video";
+  source?: "repository" | "r2";
 };
 export type Media = { type: "image" | "video"; url: string; caption: string };
 export type Article = {

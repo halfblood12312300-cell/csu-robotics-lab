@@ -22,7 +22,8 @@
         <h2 id="instructions-title">配置方法</h2>
         <ol>
           <li>生成密钥后，将<strong>管理员访问密钥</strong>保存到自己的密码管理器，以后用它登录网站后台。</li>
-          <li>在 Cloudflare 的 <strong>csu-robotics-api</strong> Worker 中，进入 <strong>Settings → Variables &amp; Secrets</strong>，分别添加下方两个同名变量，类型均选 <strong>Secret</strong>，然后保存部署。</li>
+          <li>在 Cloudflare 的 <strong>csu-robotics-api</strong> Worker 中，进入 <strong>Settings → Variables &amp; Secrets</strong>，添加 <strong>ADMIN_KEY_HASH</strong>，类型选择 <strong>Secret</strong>，值复制下方摘要，然后保存部署。</li>
+          <li>当前图片和短视频通过 GitHub 仓库发布，无需 R2；第三项 <strong>MEDIA_SIGNING_SECRET</strong> 可跳过，仅将来启用 R2 私有素材时使用。</li>
           <li>确认保存妥当后，清空本页。刷新或离开页面后，本工具无法找回这些值。</li>
         </ol>
         <p class="notice">重新生成只会替换本页显示，不会自动更换线上密钥。请勿将密钥提交到 GitHub、发到聊天或公开分享。</p>
@@ -48,7 +49,7 @@
       <section class="key-card" aria-labelledby="admin-hash-label">
         <div class="card-heading">
           <label id="admin-hash-label" for="admin-hash">2. <code>ADMIN_KEY_HASH</code></label>
-          <span class="tag">Cloudflare Secret</span>
+          <span class="tag">必填 · Cloudflare Secret</span>
         </div>
         <p id="admin-hash-help">管理员访问密钥的 SHA-256 摘要。Cloudflare 变量名填写 <code>ADMIN_KEY_HASH</code>，值填写下方内容。</p>
         <textarea id="admin-hash" rows="2" readonly autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="admin-hash-help" placeholder="生成后显示摘要"></textarea>
@@ -58,9 +59,9 @@
       <section class="key-card" aria-labelledby="media-secret-label">
         <div class="card-heading">
           <label id="media-secret-label" for="media-secret">3. <code>MEDIA_SIGNING_SECRET</code></label>
-          <span class="tag">Cloudflare Secret</span>
+          <span class="tag">可选 · 仅 R2 模式</span>
         </div>
-        <p id="media-secret-help">独立生成的素材预览签名密钥。Cloudflare 变量名填写 <code>MEDIA_SIGNING_SECRET</code>，值填写下方内容。</p>
+        <p id="media-secret-help">当前模式无需配置此项。将来启用 R2 私有素材预览时，再把此独立签名密钥保存为 Cloudflare 运行时 Secret <code>MEDIA_SIGNING_SECRET</code>。</p>
         <textarea id="media-secret" rows="2" readonly autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="media-secret-help" placeholder="生成后显示签名密钥"></textarea>
         <button class="button copy" type="button" data-copy="media-secret" disabled>复制 MEDIA_SIGNING_SECRET</button>
       </section>
