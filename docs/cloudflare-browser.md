@@ -18,20 +18,24 @@
 | 根目录 / Root directory | 仓库根目录，通常显示 `/`；不要填 `backend` |
 | Build command | 留空；Wrangler 在部署时打包后端 |
 | Deploy command | `npm run backend:deploy:cloudflare` |
+| Enable Preview builds | 关闭，首次只部署生产分支 |
+| Preview command | 关闭预览构建后无需修改此项 |
+| API token name | `csu-robotics-builds`，这是令牌名称，不是密钥值 |
+| 构建 Variable name / Value | 留空；本步骤无需额外构建变量 |
 
 根目录的 `wrangler.jsonc` 明确指向 `backend/index.ts`，因此不需要选择 Vite 前端部署模板，也不需要填写 `dist` 输出目录。仓库的 `.node-version` 已指定 Node.js 24，无需另填版本变量。Cloudflare 项目名必须与配置中的 `csu-robotics-api` 一致。首次只部署 `main`；若界面提供其他分支预览部署，暂不启用，以免预览命令访问生产数据库。
 
 依据：[Workers Builds 入门](https://developers.cloudflare.com/workers/ci-cd/builds/)、[构建配置](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)与[构建环境版本](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/)。
 
-## 2. 给构建令牌添加 D1 编辑权限
+## 2. 确认构建令牌已包含 D1 编辑权限
 
-Cloudflare 可以自动为 Workers Builds 创建构建令牌，但官方列出的默认权限不包含 D1。这个项目需要创建数据库并执行迁移，所以构建使用的令牌还必须拥有目标账号的 **D1 Edit / D1 Write** 权限；界面语言不同可能显示“编辑”或“写入”。
+Cloudflare 可以自动为 Workers Builds 创建构建令牌。以创建页面实际展示的权限清单为准：**如果已经列出 `D1 Storage (edit)`，该令牌已包含本项目所需的 D1 编辑权限，直接使用即可，无需另建令牌或重复添加权限。** 当前项目创建界面已显示这一项。
 
-在 **My Profile → API Tokens** 找到这个 Worker 构建使用的令牌，保留其所需部署权限，并为同一个 Cloudflare 账号增加 **Account → D1 → Edit**。如果使用自定义令牌，应限制到本项目所在账号，不需要为这个 `workers.dev` 后端额外开放 DNS 管理。
+本项目需要创建数据库并执行迁移，构建令牌必须能够编辑目标账号的 D1、部署 Worker 以及操作 R2。`API token name` 可以填写 `csu-robotics-builds`，供以后识别用途；这里无需粘贴任何已有 Token 的密钥值。
 
-若首次点击 **Save and Deploy** 时自动创建了令牌，而构建停在 D1 权限检查，完成上述设置后在 Worker 的构建历史里选择 **Retry build**。脚本会在读取数据库权限失败时停止，不会继续部署。
+只有当界面实际未包含 D1 编辑权限，或构建日志明确报告 D1 权限不足时，才到 **My Profile → API Tokens** 检查这个 Worker 使用的令牌，为同一个账号补充相应权限。使用自定义令牌时应限制到本项目所在账号。修改权限后，在 Worker 构建历史中选择 **Retry build**；脚本会在读取数据库权限失败时停止，不会继续部署。
 
-令牌保留在 Cloudflare 内。不要将其放进仓库、前端变量、聊天或截图。官方说明：[Builds API token](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/#api-token)、[D1 创建接口权限](https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/create/)。
+令牌保留在 Cloudflare 内。不要将密钥值放进仓库、前端变量、聊天或截图。官方说明：[Builds API token](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/#api-token)、[D1 创建接口权限](https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/create/)。文档列出的默认权限可能与实际创建页不同，不应仅因文档没有列出 D1 就认定当前令牌缺少权限。
 
 ## 3. 开通 R2，然后运行部署
 
