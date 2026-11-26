@@ -1,0 +1,41 @@
+{
+  "name": "csu-robotics-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test backend/tests/*.test.ts",
+    "backend:dev": "wrangler dev --config backend/wrangler.local.jsonc",
+    "backend:deploy": "wrangler deploy --config backend/wrangler.jsonc",
+    "backend:check": "wrangler deploy --dry-run --config backend/wrangler.local.jsonc --outdir .worker-check",
+    "db:local": "wrangler d1 migrations apply DB --local --config backend/wrangler.local.jsonc"
+  },
+  "dependencies": {
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "lucide-react": "^1.31.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20260515.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "typescript": "5.9.3",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
+  },
+  "overrides": {
+    "miniflare": {
+      "sharp": "0.35.4"
+    }
+  }
+}
