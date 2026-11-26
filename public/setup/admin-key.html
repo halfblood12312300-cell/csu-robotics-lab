@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'" />
+    <title>后台密钥配置 · CSU 机器人实验室</title>
+    <link rel="stylesheet" href="./admin-key.css" />
+    <script src="./admin-key.js" defer></script>
+  </head>
+  <body>
+    <main class="setup">
+      <header class="heading">
+        <p class="eyebrow">CSU ROBOTICS LAB</p>
+        <h1>后台密钥配置</h1>
+        <p class="intro">用于首次配置实验室网站后台。点击按钮后，密钥只在你当前的浏览器中生成和显示；本工具不会发送或保存它们。</p>
+      </header>
+
+      <section class="instructions" aria-labelledby="instructions-title">
+        <h2 id="instructions-title">配置方法</h2>
+        <ol>
+          <li>生成密钥后，将<strong>管理员访问密钥</strong>保存到自己的密码管理器，以后用它登录网站后台。</li>
+          <li>在 Cloudflare 的 <strong>csu-robotics-api</strong> Worker 中，进入 <strong>Settings → Variables &amp; Secrets</strong>，分别添加下方两个同名变量，类型均选 <strong>Secret</strong>，然后保存部署。</li>
+          <li>确认保存妥当后，清空本页。刷新或离开页面后，本工具无法找回这些值。</li>
+        </ol>
+        <p class="notice">重新生成只会替换本页显示，不会自动更换线上密钥。请勿将密钥提交到 GitHub、发到聊天或公开分享。</p>
+      </section>
+
+      <div class="toolbar">
+        <button id="generate" class="button primary" type="button">生成一组密钥</button>
+        <button id="clear" class="button" type="button">清空显示</button>
+      </div>
+      <p id="status" class="status" role="status" aria-live="polite">尚未生成密钥。</p>
+      <noscript><p class="notice">此工具需要浏览器启用 JavaScript，才能在本地生成密钥。</p></noscript>
+
+      <section class="key-card" aria-labelledby="access-key-label">
+        <div class="card-heading">
+          <label id="access-key-label" for="access-key">1. 管理员访问密钥</label>
+          <span class="tag">自己保管</span>
+        </div>
+        <p id="access-key-help">用于登录网站后台。完整保存包含 <code>csu_admin_</code> 前缀的内容，无需填入 Cloudflare。</p>
+        <textarea id="access-key" rows="2" readonly autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="access-key-help" placeholder="点击上方按钮生成"></textarea>
+        <button class="button copy" type="button" data-copy="access-key" disabled>复制访问密钥</button>
+      </section>
+
+      <section class="key-card" aria-labelledby="admin-hash-label">
+        <div class="card-heading">
+          <label id="admin-hash-label" for="admin-hash">2. <code>ADMIN_KEY_HASH</code></label>
+          <span class="tag">Cloudflare Secret</span>
+        </div>
+        <p id="admin-hash-help">管理员访问密钥的 SHA-256 摘要。Cloudflare 变量名填写 <code>ADMIN_KEY_HASH</code>，值填写下方内容。</p>
+        <textarea id="admin-hash" rows="2" readonly autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="admin-hash-help" placeholder="生成后显示摘要"></textarea>
+        <button class="button copy" type="button" data-copy="admin-hash" disabled>复制 ADMIN_KEY_HASH</button>
+      </section>
+
+      <section class="key-card" aria-labelledby="media-secret-label">
+        <div class="card-heading">
+          <label id="media-secret-label" for="media-secret">3. <code>MEDIA_SIGNING_SECRET</code></label>
+          <span class="tag">Cloudflare Secret</span>
+        </div>
+        <p id="media-secret-help">独立生成的素材预览签名密钥。Cloudflare 变量名填写 <code>MEDIA_SIGNING_SECRET</code>，值填写下方内容。</p>
+        <textarea id="media-secret" rows="2" readonly autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="media-secret-help" placeholder="生成后显示签名密钥"></textarea>
+        <button class="button copy" type="button" data-copy="media-secret" disabled>复制 MEDIA_SIGNING_SECRET</button>
+      </section>
+
+      <footer>本页没有在线提交功能。清空显示不会清空剪贴板或密码管理器，也不会更改 Cloudflare 中的配置。</footer>
+    </main>
+  </body>
+</html>

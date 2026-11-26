@@ -17,6 +17,7 @@ dist/
 *.tsbuildinfo
 .DS_Store
 backend/wrangler.jsonc
+wrangler.builds.generated.jsonc
 backend/.bootstrap-state.json
 backups/
 imports/

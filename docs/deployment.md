@@ -2,6 +2,8 @@
 
 本文中的命令均在仓库根目录执行。GitHub Pages 发布前端；Cloudflare Workers 执行 API，使用独立 D1 数据库与 R2 存储桶。所有账号、资源 ID 和最终访问地址以服务实际返回的结果为准。
 
+**希望只使用自己的普通浏览器操作：** 参见 [Cloudflare 控制台部署](cloudflare-browser.md)。该流程使用同一个 GitHub 仓库和 Cloudflare Workers Builds，不要求对话内浏览器具备登录状态。以下保留本机命令行部署流程。
+
 ## 一、启用 GitHub Pages
 
 1. 打开 [仓库 Pages 设置](https://github.com/halfblood12312300-cell/csu-robotics-lab/settings/pages)。

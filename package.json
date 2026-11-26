@@ -14,6 +14,7 @@
     "test": "node --experimental-strip-types --test backend/tests/*.test.ts",
     "backend:dev": "wrangler dev --config backend/wrangler.local.jsonc",
     "backend:deploy": "wrangler deploy --config backend/wrangler.jsonc",
+    "backend:deploy:cloudflare": "node backend/scripts/deploy-cloudflare.mjs",
     "backend:check": "wrangler deploy --dry-run --config backend/wrangler.local.jsonc --outdir .worker-check",
     "db:local": "wrangler d1 migrations apply DB --local --config backend/wrangler.local.jsonc"
   },

@@ -30,7 +30,9 @@ GitHub Pages 已部署成功，并已实际打开验证。当前 Cloudflare 后�
 
 ## 接入报名和管理功能
 
-按 [部署说明](docs/deployment.md) 创建自己的 Cloudflare 后端，随后在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 添加：
+如果自己的普通浏览器已经能登录 Cloudflare，可按 [浏览器部署说明](docs/cloudflare-browser.md) 连接本仓库，由 Cloudflare Workers Builds 创建或复用数据库、执行迁移并发布后端。无需在对话内浏览器登录，也无需把 Cloudflare API Token 发给维护者。仓库已提供后端专用的根目录 `wrangler.jsonc` 和 `npm run backend:deploy:cloudflare` 命令；运行前仍需完成 Cloudflare 的仓库授权、构建令牌 D1 权限和 R2 开通。
+
+也可以按 [部署说明](docs/deployment.md) 使用本机 Wrangler 创建自己的 Cloudflare 后端。获得实际后端地址后，在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 添加：
 
 ```text
 VITE_API_BASE_URL = Cloudflare 实际返回的后端 HTTPS 根地址
