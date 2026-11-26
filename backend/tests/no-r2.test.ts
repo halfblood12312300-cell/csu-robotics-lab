@@ -17,7 +17,7 @@ test("repository media mode supports admin login, content, settings and applicat
     assert.equal(login.status, 200);
     const session: any = await login.json();
     const admin: any = await (await worker.fetch(req("admin", { token: session.token }), env)).json();
-    assert.deepEqual(admin.capabilities, { mediaUpload: false });
+    assert.deepEqual(admin.capabilities, { mediaUpload: false, siteEditor: true, formEditor: true });
     assert.deepEqual(admin.assets, []);
 
     const image = "/media/实验室/合影 01.jpg";

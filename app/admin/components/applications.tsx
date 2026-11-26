@@ -1,8 +1,8 @@
 import { SiteLink } from "../../router";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Search, Download, Users, ExternalLink } from "lucide-react";
-import { directions } from "../../content";
 import { api, Application, states, Modal, dateLabel } from "../shared";
+import { answerText, applicationAnswers, applicationCsvRows, encodeRegistrationCsv } from "../registration-export";
 export function Applications({
   people,
   onRefresh,
@@ -19,47 +19,12 @@ export function Applications({
   const rows = people.filter(
     (a) =>
       (status === "全部" || a.status === status) &&
-      `${a.name}${a.college}${a.contact}`.includes(q),
+      `${a.name}${a.college}${a.contact}${applicationAnswers(a).map((answer) => answer.label + answerText(answer)).join(" ")}`.toLowerCase().includes(q.toLowerCase()),
   );
   function csv() {
-    const clean = (v: unknown) => {
-      let s = String(v ?? "");
-      if (/^[=+@\-\t\r\n]/.test(s)) s = "'" + s;
-      return '"' + s.replaceAll('"', '""') + '"';
-    };
-    const data = [
-      [
-        "姓名",
-        "学院专业",
-        "年级",
-        "联系方式",
-        "兴趣方向",
-        "自我介绍",
-        "每周时间",
-        "作品链接",
-        "状态",
-        "备注",
-        "报名时间",
-      ],
-      ...rows.map((a) => [
-        a.name,
-        a.college,
-        a.grade,
-        a.contact,
-        a.directions
-          .map((id) => directions.find((d) => d.id === id)?.title)
-          .join("；"),
-        a.experience,
-        a.availability,
-        a.portfolio,
-        a.status,
-        a.note,
-        a.created_at,
-      ]),
-    ];
     const url = URL.createObjectURL(
       new Blob(
-        ["\ufeff" + data.map((r) => r.map(clean).join(",")).join("\r\n")],
+        [encodeRegistrationCsv(applicationCsvRows(rows))],
         { type: "text/csv;charset=utf-8" },
       ),
     );
@@ -74,7 +39,7 @@ export function Applications({
       <div className="cms-heading">
         <div>
           <h1>报名管理</h1>
-          <p>查看同学的兴趣与经历，记录沟通进展。</p>
+          <p>查看报名时的完整回答与问题名称，记录沟通进展。后续修改表单不会改变历史答案。</p>
         </div>
         <button
           className="button small outline"
@@ -90,7 +55,7 @@ export function Applications({
           <Search size={17} />
           <input
             aria-label="搜索报名"
-            placeholder="姓名、专业或联系方式"
+            placeholder="姓名、联系方式或任意报名回答"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -112,8 +77,8 @@ export function Applications({
           <thead>
             <tr>
               <th>姓名</th>
-              <th>学院与专业</th>
-              <th>兴趣方向</th>
+              <th>联系方式</th>
+              <th>报名信息</th>
               <th>状态</th>
               <th>报名时间</th>
               <th>操作</th>
@@ -126,11 +91,11 @@ export function Applications({
                   <b>{a.name}</b>
                   <small>{a.grade}</small>
                 </td>
-                <td>{a.college}</td>
+                <td>{a.contact}</td>
                 <td>
-                  {a.directions
-                    .map((id) => directions.find((d) => d.id === id)?.title)
-                    .join("、")}
+                  {applicationAnswers(a).filter((answer) => !["name", "contact"].includes(answer.id) && answerText(answer)).slice(0, 2).map((answer) =>
+                    <small key={answer.id}>{answer.label}：{answerText(answer)}</small>,
+                  )}
                 </td>
                 <td>
                   <span className="status">{a.status}</span>
@@ -159,33 +124,18 @@ export function Applications({
       {person && (
         <Modal title="报名详情" onClose={() => setPerson(null)}>
           <h2>{person.name}</h2>
-          <p>
-            {person.college} · {person.grade}
-          </p>
+          <p className="muted">{person.formSnapshot?.title || "实验室报名"} · {person.formVersion && person.formVersion !== "legacy" ? `表单版本 ${person.formVersion}` : "原版报名表"}</p>
           <dl>
-            <dt>联系方式</dt>
-            <dd>{person.contact}</dd>
-            <dt>兴趣方向</dt>
-            <dd>
-              {person.directions
-                .map((id) => directions.find((d) => d.id === id)?.title)
-                .join("、")}
-            </dd>
-            <dt>每周时间</dt>
-            <dd>{person.availability}</dd>
-            <dt>自我介绍</dt>
-            <dd className="preserve">{person.experience}</dd>
-            {person.portfolio && (
-              <>
-                <dt>作品链接</dt>
-                <dd>
-                  <SiteLink href={person.portfolio} target="_blank" rel="noreferrer">
-                    打开作品 <ExternalLink size={14} />
-                  </SiteLink>
-                </dd>
-              </>
-            )}
+            {applicationAnswers(person).map((answer) => <Fragment key={answer.id}>
+              <dt>{answer.label}</dt>
+              <dd className="preserve">
+                {answer.type === "url" && typeof answer.value === "string" && /^https?:\/\//i.test(answer.value)
+                  ? <SiteLink href={answer.value} target="_blank" rel="noreferrer">{answer.value} <ExternalLink size={14} /></SiteLink>
+                  : answerText(answer) || "未填写"}
+              </dd>
+            </Fragment>)}
           </dl>
+          {person.formSnapshot?.consentText && <p className="notice">提交时已确认：{person.formSnapshot.consentText}</p>}
           <label>
             处理状态
             <select

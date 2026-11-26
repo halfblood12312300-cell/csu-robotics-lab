@@ -21,7 +21,7 @@ import {
 import { Frame, useSession } from "../ui";
 import { clearAdminSession, getAdminSession, isApiConfigured, loginAdmin, logoutAdmin } from "../api-client";
 import { navigate, useRoute } from "../router";
-import { Asset } from "../content";
+import { Asset, normalizeSettings } from "../content";
 import repositoryAssets from "virtual:repository-media";
 import { MediaCapabilitiesContext, repositoryMediaFolder } from "./media-context";
 import { api, AdminData, Modal } from "./shared";
@@ -57,7 +57,8 @@ export default function Admin() {
       if (!getAdminSession()) return;
       setData({
         ...d,
-        capabilities: { mediaUpload: d.capabilities?.mediaUpload === true },
+        settings: normalizeSettings(d.settings),
+        capabilities: { mediaUpload: d.capabilities?.mediaUpload === true, siteEditor: d.capabilities?.siteEditor === true, formEditor: d.capabilities?.formEditor === true },
         assets: [...repositoryAssets, ...d.assets.map((asset: Asset) => ({ ...asset, source: "r2" as const }))],
       });
       setError("");
@@ -461,6 +462,7 @@ export default function Admin() {
           )}
           {tab === "articles" && (
             <Articles
+              categories={data.settings.articles.categories}
               articles={data.articles}
               assets={data.assets}
               onUpload={addAsset}
@@ -487,6 +489,8 @@ export default function Admin() {
           {tab === "settings" && (
             <Settings
               value={data.settings}
+              articles={data.articles}
+              editingAvailable={data.capabilities?.siteEditor === true}
               assets={data.assets}
               onUpload={addAsset}
               onRefresh={load}
@@ -527,7 +531,7 @@ export default function Admin() {
             <a className="text-link" href={repositoryMediaFolder} target="_blank" rel="noreferrer">打开仓库素材文件夹 <ArrowUpRight size={15} /></a>
             <h3>设置首页与报名</h3>
             <p>
-              在“网站设置”选择首页图片或宣传视频，修改实验室简介、地点与招新信息。开启在线报名后，报名记录会出现在“报名管理”，可以搜索、备注和导出。
+              在“网站设置”维护全站品牌、首页各模块、研究方向与设备内容，调整模块顺序、显示状态、颜色及版式。报名表可编辑题目、提示、必填和选项，也可添加自定义问题；姓名与联系方式用于识别报名记录。保存前可预览首页和报名表，保存后网站立即读取新配置。开启在线报名后，记录会出现在“报名管理”，历史记录保留提交时的题目与答案，可搜索、备注和导出。
             </p>
             <h3>备份与后续开发</h3>
             <p>

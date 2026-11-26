@@ -1,3 +1,22 @@
-import {useState} from 'react';
-import {Frame,Eyebrow,ArticleCard,usePublic,ErrorNotice} from '../ui';
-export default function Articles(){const {articles,error}=usePublic();const [filter,setFilter]=useState('全部');const [q,setQ]=useState('');const categories=['全部',...new Set(articles.map(a=>a.category))];const shown=articles.filter(a=>(filter==='全部'||a.category===filter)&&`${a.title}${a.summary}`.includes(q));return <Frame><section className="section wrap"><Eyebrow>IDEAS & UPDATES</Eyebrow><h1 className="page-title">项目与动态</h1><p className="page-desc">研究导读、平台介绍和实验记录，让每一步探索都留下痕迹。</p><div className="filter-row"><div className="tabs">{categories.map(c=><button key={c} className={filter===c?'active':''} onClick={()=>setFilter(c)}>{c}</button>)}</div><input aria-label="搜索文章" placeholder="搜索文章…" value={q} onChange={e=>setQ(e.target.value)}/></div><ErrorNotice error={error}/><div className="article-grid">{shown.map(a=><ArticleCard key={a.id} article={a}/>)}</div>{!shown.length&&<div className="empty">暂无符合条件的文章。</div>}</section></Frame>}
+import { useState } from "react";
+import { Frame, Eyebrow, ArticleCard, usePublic, ErrorNotice } from "../ui";
+
+export default function Articles() {
+  const { settings, articles, error, loading } = usePublic();
+  const [filter, setFilter] = useState("全部");
+  const [query, setQuery] = useState("");
+  const categories = ["全部", ...new Set([...settings.articles.categories, ...articles.map((article) => article.category)])];
+  const shown = articles.filter((article) => (filter === "全部" || article.category === filter) &&
+    `${article.title}${article.summary}`.toLowerCase().includes(query.toLowerCase()));
+  return <Frame><section className="section wrap">
+    {settings.articles.eyebrow && <Eyebrow>{settings.articles.eyebrow}</Eyebrow>}
+    <h1 className="page-title cms-lines">{settings.articles.title}</h1>
+    {settings.articles.description && <p className="page-desc cms-lines">{settings.articles.description}</p>}
+    <div className="filter-row"><div className="tabs">{categories.map((category) => <button key={category}
+      className={filter === category ? "active" : ""} onClick={() => setFilter(category)}>{category}</button>)}</div>
+      <input aria-label="搜索文章" placeholder="搜索文章…" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
+    <ErrorNotice error={error} />
+    <div className="article-grid">{shown.map((article) => <ArticleCard key={article.id} article={article} display={settings.articles} />)}</div>
+    {!shown.length && <div className="empty">{loading ? "正在读取文章…" : settings.articles.emptyText}</div>}
+  </section></Frame>;
+}

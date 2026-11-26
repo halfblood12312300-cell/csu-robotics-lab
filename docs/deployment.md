@@ -4,7 +4,7 @@
 
 **希望只使用自己的普通浏览器操作：** 参见 [Cloudflare 控制台部署](cloudflare-browser.md)。该流程使用同一个 GitHub 仓库和 Cloudflare Workers Builds，不要求对话内浏览器具备登录状态。以下保留本机命令行部署流程。
 
-当前提交 `91945827c61575649acf87ed4a855501ec5b2cf4` 的 Pages 发布和 Workers Builds 均已成功。正式 Worker 地址已确认，公开读取接口也已在浏览器实际返回数据；本次前端接入、管理员 Secret、登录与写入仍待验证。现有项目无需重新创建，详细状态见 [上线确认](migration-status.md)。
+本项目已完成 GitHub Pages 与独立 Worker 接入，账号持有人已确认完成管理员 Secret 设置。现有项目无需重新创建；下文保留首次部署及后续维护步骤。最新代码的构建结果和实际核验范围见 [上线确认](migration-status.md)，日常内容编辑见 [后台内容维护](site-editor.md)。
 
 ## 一、启用 GitHub Pages
 

@@ -5,11 +5,11 @@ import { Plus, Search, FileText, Archive, RotateCcw, Eye } from "lucide-react";
 import { Article, Asset } from "../../content";
 import { api, dateLabel } from "../shared";
 import { ArticleEditor } from "./article-editor";
-export const newArticle = (): Article => ({
+export const newArticle = (category = "实验室动态"): Article => ({
   id: crypto.randomUUID(),
   title: "",
   summary: "",
-  category: "实验室动态",
+  category,
   body: "",
   cover: "",
   media: [],
@@ -28,6 +28,7 @@ export function Articles({
   onRefresh,
   notify,
   initialNew = false,
+  categories,
 }: {
   articles: Article[];
   assets: Asset[];
@@ -35,9 +36,11 @@ export function Articles({
   onRefresh: () => Promise<void>;
   notify: (s: string) => void;
   initialNew?: boolean;
+  categories: string[];
 }) {
+  const defaultCategory = categories.includes("实验室动态") ? "实验室动态" : categories[0] || "实验室动态";
   const [editing, setEditing] = useState<Article | null>(() =>
-    initialNew ? newArticle() : null,
+    initialNew ? newArticle(defaultCategory) : null,
   );
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
@@ -72,6 +75,7 @@ export function Articles({
       <ArticleEditor
         key={editing.id}
         initial={editing}
+        categories={categories}
         persisted={articles.some((a) => a.id === editing.id)}
         assets={assets}
         onUpload={onUpload}
@@ -91,7 +95,7 @@ export function Articles({
         </div>
         <button
           className="button small"
-          onClick={() => setEditing(newArticle())}
+          onClick={() => setEditing(newArticle(defaultCategory))}
         >
           <Plus size={17} />
           新建文章

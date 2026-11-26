@@ -9,7 +9,7 @@ export const apiOrigin = "https://test-worker.example";
 export class TestDatabase {
   sqlite = new DatabaseSync(":memory:");
   constructor() {
-    for (const name of ["0000_strange_ma_gnuci.sql", "0001_messy_chat.sql", "0002_admin_sessions.sql"]) {
+    for (const name of ["0000_strange_ma_gnuci.sql", "0001_messy_chat.sql", "0002_admin_sessions.sql", "0003_application_form.sql"]) {
       this.sqlite.exec(readFileSync(new URL("../migrations/" + name, import.meta.url), "utf8"));
     }
   }

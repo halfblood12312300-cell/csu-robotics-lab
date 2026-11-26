@@ -17,7 +17,7 @@ import {
 import { Article, Asset, Media } from "../../content";
 import { ArticleBody } from "../../ui";
 import { AssetPicker, UploadArea } from "./media-library";
-import { api, categories, Modal } from "../shared";
+import { api, Modal } from "../shared";
 import { useMediaCapabilities } from "../media-context";
 export function ArticlePreview({ article }: { article: Article }) {
   return (
@@ -56,6 +56,7 @@ export function ArticleEditor({
   onSaved,
   onClose,
   persisted,
+  categories,
 }: {
   initial: Article;
   persisted: boolean;
@@ -63,6 +64,7 @@ export function ArticleEditor({
   onUpload: (a: Asset) => void;
   onSaved: () => Promise<void>;
   onClose: () => void;
+  categories: string[];
 }) {
   const { mediaUpload } = useMediaCapabilities();
   const [a, setA] = useState<Article>(initial);
@@ -347,7 +349,7 @@ export function ArticleEditor({
                 value={a.category}
                 onChange={(e) => setA({ ...a, category: e.target.value })}
               >
-                {categories.map((c) => (
+                {[...new Set([a.category, ...categories].filter(Boolean))].map((c) => (
                   <option key={c}>{c}</option>
                 ))}
               </select>

@@ -1,6 +1,6 @@
 import { SiteLink } from "./router";
 import { MediaImage, MediaVideo } from "./media";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -13,99 +13,129 @@ import {
   BrainCircuit,
   Play,
 } from "lucide-react";
-import { Article } from "./content";
+import { type Article } from "./content";
+import { defaultSettings, type ContentLink, type Settings } from "./site-config";
 import { logoutAdmin, mediaUrl } from "./api-client";
 import { usePublicState, useSessionState } from "./site-state";
 export { ArrowUpRight, ArrowRight, MapPin, Play };
 export const usePublic = usePublicState;
 export const useSession = useSessionState;
-export function Header() {
+export function contentLinkVisible(link: ContentLink, settings?: Settings) {
+  if (!link.enabled || !link.label.trim() || !link.href.trim()) return false;
+  const anchors: Record<string, string> = { about: "hero", stats: "stats", research: "research", platforms: "platforms", stories: "stories", media: "gallery", banner: "banner" };
+  const anchor = link.href.match(/^\/?#([^?]+)$/)?.[1];
+  const module = anchor ? anchors[anchor] : undefined;
+  return !module || !settings || settings.home.modules.some((item) => item.id === module && item.enabled);
+}
+export function ContentAction({ link, settings, className = "text-link", arrow = "up" }: {
+  link: ContentLink; settings?: Settings; className?: string; arrow?: "up" | "right" | "none";
+}) {
+  if (!contentLinkVisible(link, settings)) return null;
+  return <SiteLink href={link.href} className={className}
+    {...(/^https?:/.test(link.href) ? { target: "_blank", rel: "noreferrer" } : {})}>
+    {link.label}{arrow === "up" ? <ArrowUpRight size={18} /> : arrow === "right" ? <ArrowRight size={18} /> : null}
+  </SiteLink>;
+}
+export function siteThemeStyle(settings: Settings): CSSProperties {
+  const rgb = (value: string): number[] => {
+    const raw = /^#[a-f0-9]{3}([a-f0-9]{3})?$/i.test(value) ? value.slice(1) : "244bd8";
+    const hex = raw.length === 3 ? raw.split("").map((part) => part + part).join("") : raw;
+    return [0, 2, 4].map((index) => parseInt(hex.slice(index, index + 2), 16));
+  };
+  const luminance = (channels: number[]) => channels.map((channel) => channel / 255)
+    .map((channel) => channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4)
+    .reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
+  const contrast = (first: number[], second: number[]) => {
+    const a = luminance(first), b = luminance(second);
+    return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+  };
+  const accent = rgb(settings.theme.accentColor), background = rgb(settings.theme.backgroundColor);
+  const dark = luminance(background) < .179;
+  const surface = dark ? [25, 39, 59] : [255, 255, 255];
+  let foregroundAccent = accent;
+  for (let step = 1; step <= 10 && (contrast(foregroundAccent, background) < 4.5 || contrast(foregroundAccent, surface) < 4.5); step++) {
+    foregroundAccent = accent.map((channel) => Math.round(channel + ((dark ? 255 : 0) - channel) * step / 10));
+  }
+  return {
+    "--blue": settings.theme.accentColor,
+    "--accent-text": `rgb(${foregroundAccent.join(",")})`,
+    "--accent-ink": contrast(accent, [255, 255, 255]) >= contrast(accent, [21, 32, 49]) ? "#ffffff" : "#152031",
+    "--ink": dark ? "#eef2f8" : "#152031",
+    "--muted": dark ? "#bac5d4" : "#697384",
+    "--line": dark ? "#374457" : "#e2e6ed",
+    "--soft": dark ? "#213048" : "#f5f6f9",
+    "--public-surface": dark ? "#19273b" : "#ffffff",
+    "--public-background": settings.theme.backgroundColor,
+    "--content-width": { compact: "1040px", standard: "1240px", wide: "1440px" }[settings.theme.contentWidth],
+    "--section-space": settings.theme.spacing === "compact" ? "58px" : "96px",
+    "--public-radius": settings.theme.cornerStyle === "rounded" ? "18px" : "4px",
+  } as CSSProperties;
+}
+export function Header({ preview = false }: { preview?: boolean }) {
   const [open, setOpen] = useState(false);
   const { isAdmin } = useSession();
+  const { settings } = usePublic();
+  const site = settings.site;
   return (
-    <header className="header">
-      <SiteLink href="/" className="brand">
-        <span className="brand-mark">
-          <Network size={27} />
+    <header className={"header" + (settings.theme.stickyHeader ? "" : " header-static")}>
+      <SiteLink href="/" className="brand" onClick={() => setOpen(false)}>
+        <span className={"brand-mark" + (site.logo ? " has-logo" : "")}>
+          {site.logo ? <MediaImage preview={preview} src={site.logo} alt={site.logoAlt} /> : <Network size={27} />}
         </span>
-        <span>
-          <b>机器人实验室</b>
-          <small>中南大学 · 数学与统计学院</small>
-        </span>
+        <span><b>{site.name}</b>{site.subtitle && <small>{site.subtitle}</small>}</span>
       </SiteLink>
-      <button
-        className="menu-toggle"
-        onClick={() => setOpen(!open)}
-        aria-label={open ? "关闭菜单" : "打开菜单"}
-        aria-expanded={open}
-      >
+      <button className="menu-toggle" onClick={() => setOpen(!open)}
+        aria-label={open ? "关闭菜单" : "打开菜单"} aria-expanded={open} aria-controls="site-navigation">
         {open ? <X /> : <Menu />}
       </button>
-      <nav className={open ? "nav open" : "nav"}>
-        <SiteLink href="/#about" onClick={() => setOpen(false)}>
-          关于实验室
-        </SiteLink>
-        <SiteLink href="/#research" onClick={() => setOpen(false)}>
-          研究方向
-        </SiteLink>
-        <SiteLink href="/#platforms" onClick={() => setOpen(false)}>
-          实验平台
-        </SiteLink>
-        <SiteLink href="/articles">项目与动态</SiteLink>
-        <SiteLink href="/admin" className="admin-entry">
-          {isAdmin ? "管理工作台" : "管理员登录"}
-        </SiteLink>
-        <SiteLink href="/join" className="button small">
-          加入我们 <ArrowUpRight size={16} />
-        </SiteLink>
+      <nav id="site-navigation" className={open ? "nav open" : "nav"} aria-label="主导航">
+        {site.navLinks.filter((link) => contentLinkVisible(link, settings)).map((link) => (
+          <SiteLink key={link.id} href={link.href} onClick={() => setOpen(false)}
+            {...(/^https?:/.test(link.href) ? { target: "_blank", rel: "noreferrer" } : {})}>{link.label}</SiteLink>
+        ))}
+        {site.showAdminLink && <SiteLink href="/admin" className="admin-entry" onClick={() => setOpen(false)}>
+          {isAdmin ? site.workbenchLabel : site.adminLabel}
+        </SiteLink>}
+        {site.showJoin && <SiteLink href="/join" className="button small" onClick={() => setOpen(false)}>
+          {site.joinLabel}<ArrowUpRight size={16} />
+        </SiteLink>}
       </nav>
     </header>
   );
 }
 export function Footer() {
   const { settings } = usePublic();
-  return (
-    <footer className="footer wrap">
-      <div>
-        <SiteLink className="footer-title" href="/">
-          中南大学数学与统计学院
-          <br />
-          机器人实验室
-        </SiteLink>
-        <p>理解任务 · 感知环境 · 自主行动</p>
-      </div>
-      <div>
-        <span>联系我们</span>
-        <p>{settings.location}</p>
-        {settings.contact && <p>{settings.contact}</p>}
-        <SiteLink href="/#about">
-          了解实验室 <ArrowUpRight size={14} />
-        </SiteLink>
-      </div>
-      <div>
-        <span>探索更多</span>
-        <SiteLink href="/articles">项目与动态</SiteLink>
-        <SiteLink href="/#platforms">实验平台</SiteLink>
-        <SiteLink href="/admin">
-          管理入口 <ArrowUpRight size={14} />
-        </SiteLink>
-      </div>
-      <div className="footer-bottom">
-        <small>CSU · MATHEMATICS & STATISTICS · ROBOTICS LAB</small>
-        <small>让好奇心，在真实世界中得到验证。</small>
-      </div>
-    </footer>
-  );
+  const footer = settings.footer;
+  return <footer className="footer wrap">
+    <div>
+      <SiteLink className="footer-title cms-lines" href="/">{footer.title}</SiteLink>
+      {footer.tagline && <p className="cms-lines">{footer.tagline}</p>}
+    </div>
+    <div>
+      {footer.contactTitle && <span>{footer.contactTitle}</span>}
+      {settings.location && <p className="cms-lines">{settings.location}</p>}
+      {settings.contact && <p className="cms-lines">{settings.contact}</p>}
+      <ContentAction link={footer.aboutLink} settings={settings} />
+    </div>
+    <div>
+      {footer.exploreTitle && <span>{footer.exploreTitle}</span>}
+      {footer.links.map((link) => <ContentAction key={link.id} link={link} settings={settings} arrow="none" />)}
+      {settings.site.showAdminLink && <SiteLink href="/admin">{footer.adminLabel}<ArrowUpRight size={14} /></SiteLink>}
+    </div>
+    {(footer.bottomLeft || footer.bottomRight) && <div className="footer-bottom">
+      <small className="cms-lines">{footer.bottomLeft}</small><small className="cms-lines">{footer.bottomRight}</small>
+    </div>}
+  </footer>;
 }
-export function Frame({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <Header />
-      <AdminBar />
-      <main>{children}</main>
-      <Footer />
-    </>
-  );
+export function Frame({ children, preview = false }: { children: React.ReactNode; preview?: boolean }) {
+  const { settings } = usePublic();
+  return <div className={"public-site" + (preview ? " public-preview" : "")}
+    data-spacing={settings.theme.spacing} data-corners={settings.theme.cornerStyle} style={siteThemeStyle(settings)}
+    onClickCapture={preview ? (event) => {
+      if ((event.target as HTMLElement).closest("a")) event.preventDefault();
+    } : undefined}>
+    <Header preview={preview} />{!preview && <AdminBar />}<main>{children}</main><Footer />
+  </div>;
 }
 export function AdminBar() {
   const { isAdmin } = useSession();
@@ -136,7 +166,8 @@ export function Eyebrow({
   );
 }
 export function DirectionIcon({ index }: { index: number }) {
-  const Icon = [Network, BrainCircuit, Blocks, ScanEye][index];
+  const icons = [Network, BrainCircuit, Blocks, ScanEye];
+  const Icon = icons[index % icons.length] || Network;
   return <Icon size={28} strokeWidth={1.5} />;
 }
 export function ErrorNotice({ error }: { error: string }) {
@@ -146,32 +177,32 @@ export function ErrorNotice({ error }: { error: string }) {
     </div>
   ) : null;
 }
-export function Cover({ article }: { article: Article }) {
+export function Cover({ article, display = defaultSettings.articles, preview = false }: { article: Article; display?: Settings["articles"]; preview?: boolean }) {
   return article.cover ? (
-    <MediaImage src={article.cover} alt={article.title} loading="lazy" />
+    <MediaImage preview={preview} src={article.cover} alt={article.title} loading="lazy" />
   ) : (
     <div className="diagram-cover">
-      <span>PERCEIVE</span>
+      <span>{display.coverLeft}</span>
       <i />
       <BrainCircuit size={58} strokeWidth={1} />
       <i />
-      <span>ACT</span>
-      <small>从指令到行动</small>
+      <span>{display.coverRight}</span>
+      <small>{display.coverCaption}</small>
     </div>
   );
 }
-export function ArticleCard({ article }: { article: Article }) {
+export function ArticleCard({ article, display = defaultSettings.articles, preview = false }: { article: Article; display?: Settings["articles"]; preview?: boolean }) {
   return (
     <SiteLink className="article-card" href={"/articles/" + article.id}>
       <div className="card-cover">
-        <Cover article={article} />
+        <Cover article={article} display={display} preview={preview} />
         <span className="circle-arrow">
           <ArrowUpRight size={21} />
         </span>
       </div>
       <div className="card-meta">
         <span>{article.category}</span>
-        <small>{article.date || "实验室介绍"}</small>
+        <small>{article.date || display.undatedLabel}</small>
       </div>
       <h3>{article.title}</h3>
       <p>{article.summary}</p>

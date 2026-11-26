@@ -1,7 +1,10 @@
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import type { Article, Asset, Settings } from "../content";
+import type { FieldOption, FieldType, FormAnswer, FormField } from "../site-config";
 import { apiJson } from "../api-client";
+export type ApplicationAnswerSnapshot = { id: string; label: string; type: FieldType; value: FormAnswer; options: FieldOption[] };
+export type ApplicationFormSnapshot = { title: string; version: number; consentText: string; fields: FormField[] };
 export type Application = {
   id: string;
   name: string;
@@ -15,13 +18,16 @@ export type Application = {
   status: string;
   note: string;
   created_at: string;
+  answers?: ApplicationAnswerSnapshot[];
+  formVersion?: string;
+  formSnapshot?: ApplicationFormSnapshot | null;
 };
 export type AdminData = {
   settings: Settings;
   articles: Article[];
   applications: Application[];
   assets: Asset[];
-  capabilities?: { mediaUpload: boolean };
+  capabilities?: { mediaUpload: boolean; siteEditor?: boolean; formEditor?: boolean };
 };
 export const states = ["待查看", "已联系", "待交流", "已录取", "暂不合适"];
 export const categories = [

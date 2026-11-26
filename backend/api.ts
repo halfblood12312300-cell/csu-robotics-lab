@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { initialArticles, defaultSettings } from "../app/content.ts";
-import { normalizeRepositoryMediaPath } from "../app/repository-media-path.ts";
+import { initialArticles } from "../app/content.ts";
 import { ApiError, type Env } from "./types.ts";
 import { json, readJson } from "./http.ts";
 import {
@@ -8,41 +7,20 @@ import {
   requireAuthConfiguration, revokeSession, verifyAccessKey, verifyPreviewUrl,
 } from "./auth.ts";
 import { listAssets, mediaAction, requireMediaStorage, uploadChunk } from "./media.ts";
-
-const safeUrl = z.string().max(2000).refine((s) => {
-  if (!s || normalizeRepositoryMediaPath(s) || /^\/api\/media\/[a-zA-Z0-9_.-]+$/.test(s)) return true;
-  try {
-    const u = new URL(s);
-    return ["http:", "https:"].includes(u.protocol) && !u.username && !u.password;
-  } catch { return false; }
-}, "请填写有效链接");
+import { getSettings, saveSettings, settingsReferenceMedia } from "./settings.ts";
+import { applicationView, validateApplication } from "./applications.ts";
+import { canonicalMediaUrl, mediaUrlSchema as safeUrl } from "./urls.ts";
+export { getSettings } from "./settings.ts";
+export { canonicalMediaUrl } from "./urls.ts";
 
 const articleSchema = z.object({
   id: z.string().regex(/^[a-zA-Z0-9-]{1,80}$/),
   title: z.string().trim().min(2).max(100),
-  category: z.enum(["招新通知", "研究导读", "平台介绍", "实验记录", "实验室动态"]),
+  category: z.string().trim().min(1, "请填写文章分类").max(40),
   summary: z.string().trim().max(250), body: z.string().max(50000), cover: safeUrl,
   media: z.array(z.object({ type: z.enum(["image", "video"]), url: safeUrl, caption: z.string().max(150) })).max(20),
   status: z.enum(["published", "draft", "archived"]), date: z.string().max(20),
 });
-const settingsSchema = z.object({
-  registrationOpen: z.boolean(), deadline: z.string().max(16), contact: z.string().max(100),
-  heroImage: safeUrl, heroVideo: safeUrl, intro: z.string().max(250), location: z.string().max(150),
-});
-const applicationSchema = z.object({
-  name: z.string().trim().min(2, "请填写姓名").max(40),
-  college: z.string().trim().min(2, "请填写学院与专业").max(100), grade: z.string().trim().min(1).max(40),
-  contact: z.string().trim().min(5, "请填写有效联系方式").max(100),
-  directions: z.array(z.enum(["agent", "model", "system", "vision"])).min(1, "请选择至少一个兴趣方向").max(4),
-  experience: z.string().trim().min(10, "请至少填写10字的自我介绍").max(2000),
-  availability: z.string().trim().min(1).max(100), portfolio: safeUrl,
-  consent: z.literal(true), website: z.string().max(0),
-});
-
-export async function getSettings(env: Env) {
-  const row = await env.DB.prepare("SELECT value FROM settings WHERE id=?").bind("site").first<{ value: string }>();
-  return { ...defaultSettings, ...(row ? JSON.parse(row.value) : {}) } as typeof defaultSettings;
-}
 
 export async function getArticles(env: Env, all = false) {
   const { results } = await env.DB.prepare("SELECT * FROM articles ORDER BY updated_at DESC").all();
@@ -52,20 +30,6 @@ export async function getArticles(env: Env, all = false) {
     ...initialArticles.filter((a) => !ids.has(a.id)),
   ];
   return all ? rows : rows.filter((a) => a.status === "published");
-}
-
-/** Store stable media paths; never persist short-lived preview signatures. */
-export function canonicalMediaUrl(value: unknown, origin: string): unknown {
-  if (typeof value !== "string") return value;
-  const repositoryPath = normalizeRepositoryMediaPath(value);
-  if (repositoryPath) return repositoryPath;
-  // Do not let URL normalization turn a rejected repository traversal into another endpoint.
-  if (value.startsWith("/media/")) return value;
-  try {
-    const url = new URL(value, origin);
-    if (url.origin === origin && /^\/api\/media\/[a-zA-Z0-9_.-]+$/.test(url.pathname)) return url.pathname;
-  } catch { /* Schema validation reports invalid user input. */ }
-  return value;
 }
 
 function normalizeContent(body: unknown, origin: string): any {
@@ -83,7 +47,7 @@ function normalizeContent(body: unknown, origin: string): any {
 async function publiclyReferenced(env: Env, id: string): Promise<boolean> {
   const url = "/api/media/" + id;
   const [settings, articles] = await Promise.all([getSettings(env), getArticles(env)]);
-  return settings.heroImage === url || settings.heroVideo === url || articles.some((a) =>
+  return settingsReferenceMedia(settings, url) || articles.some((a) =>
     a.cover === url || a.media.some((m: any) => m.url === url) || a.body.includes("](" + url + ")"),
   );
 }
@@ -121,16 +85,16 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
       const session = await authenticate(request, env);
       return json({ authenticated: !!session, isAdmin: !!session, ...(session ? { expiresAt: session.expiresAt } : {}) });
     }
-    if (key === "data") return json({ settings: await getSettings(env), articles: await getArticles(env) });
+    if (key === "data") return json({ settings: await getSettings(env), articles: await getArticles(env), capabilities: { formEditor: true } });
     if (key === "admin" || key.startsWith("admin/")) {
       await requireAdmin(request, env);
       if (key.startsWith("admin/media/")) requireMediaStorage(env);
       if (key !== "admin") return json({ error: "页面不存在" }, 404);
       return json({
-        capabilities: { mediaUpload: !!env.BUCKET },
+        capabilities: { mediaUpload: !!env.BUCKET, siteEditor: true, formEditor: true },
         assets: await listAssets(env), settings: await getSettings(env), articles: await getArticles(env, true),
         applications: (await env.DB.prepare("SELECT * FROM applications ORDER BY created_at DESC").all()).results
-          .map((r: any) => ({ ...r, directions: JSON.parse(r.directions) })),
+          .map(applicationView),
       });
     }
     if (/^media\/[^/]+$/.test(key)) return serveMedia(request, env, key.slice(6));
@@ -155,7 +119,7 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
   const admin = (key === "admin" || key.startsWith("admin/")) ? await requireAdmin(request, env) : null;
   if (key.startsWith("admin/media/")) requireMediaStorage(env);
   if (key === "admin/media/chunk") return json(await uploadChunk(env, request, admin!.tokenHash));
-  const body = await readJson(request);
+  const body = await readJson(request, key === "admin/settings" ? 256_000 : 100_000);
   if (key === "admin/media/preview") {
     const { id } = z.object({ id: z.string().regex(/^[a-zA-Z0-9_.-]{1,100}$/) }).parse(body);
     const exists = await env.DB.prepare("SELECT id FROM media_assets WHERE id=?").bind(id).first();
@@ -172,24 +136,21 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
       return json({ error: "报名暂未开放或已截止，请关注后续通知" }, 403);
     }
     if (await rateLimited(request, env, "apply", 10, 10 * 60 * 1000)) return json({ error: "提交过于频繁，请10分钟后再试" }, 429);
-    const a = applicationSchema.parse(body);
+    const a = validateApplication(body, settings);
     const id = crypto.randomUUID();
     try {
       await env.DB.prepare(
-        "INSERT INTO applications (id,name,college,grade,contact,directions,experience,availability,portfolio,status,note,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO applications (id,name,college,grade,contact,directions,experience,availability,portfolio,status,note,created_at,answers_json,form_snapshot,form_version) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       ).bind(id, a.name, a.college, a.grade, a.contact.toLowerCase(), JSON.stringify(a.directions), a.experience,
-        a.availability, a.portfolio, "待查看", "", new Date().toISOString()).run();
+        a.availability, a.portfolio, "待查看", "", new Date().toISOString(), JSON.stringify(a.answers), JSON.stringify(a.formSnapshot), a.formVersion).run();
     } catch (error) {
       if (String(error).includes("UNIQUE")) return json({ error: "该联系方式已提交报名，请勿重复提交" }, 409);
       throw error;
     }
-    return json({ id, message: "报名已收到，请留意后续联系。" }, 201);
+    return json({ id, message: settings.registration.successMessage }, 201);
   }
   if (key === "admin/settings") {
-    const s = settingsSchema.parse(normalizeContent(body, url.origin));
-    await env.DB.prepare("INSERT INTO settings (id,value) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value")
-      .bind("site", JSON.stringify(s)).run();
-    return json({ ok: true });
+    return json({ ok: true, settings: await saveSettings(env, body, url.origin) });
   }
   if (key === "admin/article") {
     const a = articleSchema.parse(normalizeContent(body, url.origin));

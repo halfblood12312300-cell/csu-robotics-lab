@@ -1,37 +1,5 @@
-export const directions = [
-  {
-    id: "agent",
-    number: "01",
-    title: "专用智能体开发",
-    en: "TASK AGENTS",
-    desc: "理解自然语言指令，分解任务，调用工具，让机器人协调各个模块完成具体工作。",
-    tags: ["任务规划", "工具调用", "执行反馈"],
-  },
-  {
-    id: "model",
-    number: "02",
-    title: "开源语言模型微调",
-    en: "LANGUAGE MODELS",
-    desc: "从任务数据出发，开展指令微调、模型评测与部署优化，让模型更懂机器人面对的场景。",
-    tags: ["数据构建", "指令微调", "模型评测"],
-  },
-  {
-    id: "system",
-    number: "03",
-    title: "机器人功能模块",
-    en: "ROBOT SYSTEMS",
-    desc: "连接定位导航、路径规划、语音交互与运动接口，把独立功能组成完整的任务流程。",
-    tags: ["自主导航", "系统集成", "实机测试"],
-  },
-  {
-    id: "vision",
-    number: "04",
-    title: "计算机视觉",
-    en: "COMPUTER VISION",
-    desc: "研究目标检测、跟踪、场景理解与视觉定位，为自主行动提供对环境的判断。",
-    tags: ["目标识别", "场景理解", "感知融合"],
-  },
-];
+export { defaultDirections as directions, defaultSettings, normalizeSettings } from "./site-config.ts";
+export type { Settings } from "./site-config.ts";
 export type Asset = {
   id: string;
   name: string;
@@ -58,17 +26,6 @@ export type Article = {
   status: string;
   date: string;
 };
-export const defaultSettings = {
-  registrationOpen: false,
-  deadline: "",
-  contact: "",
-  heroImage: "/media/a2-scene.jpg",
-  heroVideo: "",
-  intro:
-    "依托数学、统计与计算机方法，探索机器人从理解指令到自主执行任务的完整过程。",
-  location: "中南大学数学与统计学院数理楼238",
-};
-export type Settings = typeof defaultSettings;
 export const initialArticles: Article[] = [
   {
     id: "welcome",

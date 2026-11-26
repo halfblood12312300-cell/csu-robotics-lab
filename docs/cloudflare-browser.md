@@ -2,7 +2,7 @@
 
 这个流程继续使用现有仓库 `halfblood12312300-cell/csu-robotics-lab`。前端和公开图片、短视频由 GitHub Pages 发布，Cloudflare Workers 与 D1 负责报名、文章和网站设置。默认不启用 R2，无需在电脑安装 Node.js。
 
-本项目已完成仓库授权和三项 D1 迁移；无 R2 提交 `91945827c61575649acf87ed4a855501ec5b2cf4` 的 Pages 发布与 Workers Builds 均已成功。正式 Worker 地址已确认，公开读取接口也已在浏览器实际返回数据；当前仍需验证本次前端接入、`ADMIN_KEY_HASH` 配置、管理员登录与写入。完整发布记录见 [上线确认](migration-status.md)，现有项目无需重新创建。
+本项目已完成 GitHub Pages 与独立 Worker 接入，账号持有人已确认完成管理员 Secret 设置。现有项目无需重新创建；下文保留首次部署及后续维护步骤。最新代码的构建结果和实际核验范围见 [上线确认](migration-status.md)，日常内容编辑见 [后台内容维护](site-editor.md)。
 
 ## 1. 连接现有 GitHub 仓库
 

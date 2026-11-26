@@ -1,13 +1,138 @@
+import { type CSSProperties, type ReactNode } from "react";
 import { SiteLink } from "./router";
 import { MediaImage, MediaVideo } from "./media";
-import {Frame,Eyebrow,ArrowUpRight,ArrowRight,DirectionIcon,ArticleCard,usePublic,ErrorNotice} from './ui';
-import {directions} from './content';
-export default function Home(){const {settings,articles,error}=usePublic();const showcaseArticles=articles.filter(a=>a.category!=='招新通知');const media=showcaseArticles.flatMap(a=>a.media.map(m=>({...m,title:a.title,id:a.id})));return <Frame>
-<section className="hero wrap" id="about"><div className="hero-copy"><Eyebrow>CSU ROBOTICS LAB</Eyebrow><h1>让机器人<br/>理解任务，<br/><em>自主行动。</em></h1><p>{settings.intro}</p><div className="hero-actions"><SiteLink className="button" href="#research">探索研究方向 <ArrowUpRight size={18}/></SiteLink><SiteLink href="#platforms" className="text-link">了解实验平台 <ArrowRight size={17}/></SiteLink></div><div className="hero-note"><span className="dot"/>欢迎对机器人感兴趣的同学</div></div><div className="hero-visual"><div className="hero-photo">{settings.heroVideo?<MediaVideo src={settings.heroVideo} controls playsInline poster={settings.heroImage} preload="metadata"/>:<MediaImage src={settings.heroImage} alt="机器人设备展示" fetchPriority="high"/>}<div className="photo-label"><span>ALGORITHMS MEET THE REAL WORLD</span><b>从算法，走向真实世界。</b></div></div><div className="visual-bottom"><span>ROBOTICS × MATHEMATICS</span><span>探索 · 实践 · 协作 <ArrowUpRight size={17}/></span></div><div className="image-credit">{settings.heroImage.startsWith("/media/")&&!settings.heroVideo?"当前设备展示图来自宇树官网，非实验室实拍":"实验室影像"}</div></div></section>
-<div className="stats wrap"><div><strong>06<span>台</span></strong><p>真实机器人平台</p></div><div><strong>04<span>个</span></strong><p>主要研究方向</p></div><div><strong>238</strong><p>数理楼 · 实验室</p></div><div className="stats-statement">用数学理解问题，<br/>用实验验证想法。</div></div><ErrorNotice error={error}/>
-<section className="research section wrap" id="research"><div className="section-heading"><div><Eyebrow number="01">RESEARCH DIRECTIONS</Eyebrow><h2>从你的兴趣出发。</h2></div><p>围绕机器人自主执行任务，<br/>找到你想解决的具体问题。</p></div><div className="research-grid">{directions.map((d,i)=><SiteLink href={'/research/'+d.id} key={d.id} className="research-item"><div className="research-top"><DirectionIcon index={i}/><span>{d.number}</span></div><small>{d.en}</small><h3>{d.title}</h3><p>{d.desc}</p><div className="tags">{d.tags.map(t=><span key={t}>{t}</span>)}</div><span className="research-arrow"><ArrowUpRight size={22}/></span></SiteLink>)}</div></section>
-<section className="platform-section" id="platforms"><div className="wrap section"><div className="section-heading"><div><Eyebrow number="02">EXPERIMENTAL PLATFORMS</Eyebrow><h2>在真实平台上，<br/>验证每一步探索。</h2></div><p>两种机器人形态，六台实机。<br/>为算法开发、功能联调与实验验证提供基础。</p></div><div className="platform-grid"><article className="platform"><MediaImage src="/media/a2-scene.jpg" alt="A2-W狗形机器人官方展示" loading="lazy"/><div className="platform-content"><div><small>狗形机器人</small><h3>A2-W PRO</h3></div><b>03 <span>台</span></b><p>可围绕移动感知、定位导航与自主任务流程开展探索。</p><SiteLink href="/articles/platforms">了解实验平台 <ArrowUpRight size={18}/></SiteLink></div></article><article className="platform"><MediaImage src="/media/h2-scene.jpg" alt="H2人形机器人官方展示" loading="lazy"/><div className="platform-content"><div><small>人形机器人</small><h3>H2 <span>教育旗舰版</span></h3></div><b>03 <span>台</span></b><p>可结合设备接口，探索视觉感知、语言交互与系统集成。</p><SiteLink href="/articles/platforms">了解实验平台 <ArrowUpRight size={18}/></SiteLink></div></article></div><div className="platform-note">设备展示图来源：<SiteLink href="https://www.unitree.com/cn/mobile/A2-W/" target="_blank" rel="noreferrer">宇树A2-W</SiteLink> / <SiteLink href="https://www.unitree.com/cn/mobile/H2/" target="_blank" rel="noreferrer">宇树H2</SiteLink> · 具体研究以实际设备配置及开放接口为基础</div></div></section>
-<section className="section wrap" id="stories"><div className="section-heading"><div><Eyebrow number="03">IDEAS & UPDATES</Eyebrow><h2>记录想法，也记录过程。</h2></div><SiteLink className="text-link" href="/articles">全部文章 <ArrowRight size={18}/></SiteLink></div><div className="article-grid">{showcaseArticles.slice(0,3).map(a=><ArticleCard key={a.id} article={a}/>)}</div></section>
-{media.length>0&&<section className="media-section section wrap" id="media"><Eyebrow>LAB IN MOTION</Eyebrow><h2>看见实验的每一步。</h2><div className="media-grid">{media.slice(0,6).map((m,i)=><figure key={i}>{m.type==='video'?<MediaVideo controls playsInline preload="metadata" src={m.url}/>:<SiteLink href={'/articles/'+m.id}><MediaImage src={m.url} alt={m.caption||m.title} loading="lazy"/></SiteLink>}<figcaption>{m.caption||m.title}</figcaption></figure>)}</div></section>}
-<section className="join-banner wrap"><div><Eyebrow>EXPLORE OUR RESEARCH</Eyebrow><h2>研究，从具体问题开始。</h2><p>从任务规划到机器人系统，从语言模型到视觉感知。<br/>阅读研究导读、平台介绍与项目记录，了解实验室的探索方向。</p><SiteLink href="/articles" className="button white">浏览项目与动态 <ArrowUpRight size={18}/></SiteLink></div><div className="join-symbol" aria-hidden="true">∑<span>IDEAS → ACTION</span></div></section>
-</Frame>}
+import { type Article } from "./content";
+import { type HomeModuleId, type SectionHeading, type Settings } from "./site-config";
+import {
+  Frame, Eyebrow, ArrowUpRight, DirectionIcon, ArticleCard, usePublic, ErrorNotice, ContentAction,
+} from "./ui";
+
+const columns = (value: number): CSSProperties => ({ "--content-columns": value, "--mobile-columns": Math.min(2, value) } as CSSProperties);
+function Heading({ heading, children }: { heading: SectionHeading; children?: ReactNode }) {
+  return <div className="section-heading">
+    <div>
+      {(heading.eyebrow || heading.number) && <Eyebrow number={heading.number}>{heading.eyebrow}</Eyebrow>}
+      {heading.title && <h2 className="cms-lines">{heading.title}</h2>}
+    </div>
+    {(heading.description || children) && <div className="section-heading-aside">
+      {heading.description && <p className="cms-lines">{heading.description}</p>}{children}
+    </div>}
+  </div>;
+}
+
+/** The same renderer is used by the public homepage and the administrator's unsaved preview. */
+export function HomeContent({ settings, articles, preview = false, error = "" }: {
+  settings: Settings; articles: Article[]; preview?: boolean; error?: string;
+}) {
+  const { home } = settings;
+  const directions = home.research.directions.filter((item) => item.enabled);
+  const platforms = home.platforms.items.filter((item) => item.enabled);
+  const stats = home.stats.items.filter((item) => item.enabled);
+  const eligibleArticles = articles.filter((article) => article.status === "published" &&
+    (!home.stories.excludeRecruitment || article.category !== "招新通知"));
+  const featured = home.stories.featuredIds.flatMap((id) => {
+    const article = eligibleArticles.find((value) => value.id === id);
+    return article ? [article] : [];
+  });
+  const shownArticles = [...featured, ...eligibleArticles.filter((article) => !home.stories.featuredIds.includes(article.id))]
+    .slice(0, home.stories.limit);
+  const gallery = (home.gallery.source === "manual"
+    ? home.gallery.items.filter((item) => item.enabled && item.url)
+    : eligibleArticles.flatMap((article) => article.media.map((item, index) => ({
+      ...item, id: `${article.id}-${index}`, enabled: true, caption: item.caption || article.title, href: "/articles/" + article.id,
+    })))).slice(0, home.gallery.limit);
+
+  const modules: Record<HomeModuleId, ReactNode> = {
+    hero: <section className={"hero wrap hero-" + home.hero.layout + (!settings.heroImage && !settings.heroVideo ? " hero-no-media" : "")} id="about">
+      <div className="hero-copy">
+        {home.hero.eyebrow && <Eyebrow>{home.hero.eyebrow}</Eyebrow>}
+        <h1><span className="cms-lines">{home.hero.title}</span>{home.hero.highlight && <em className="hero-highlight cms-lines">{home.hero.highlight}</em>}</h1>
+        {settings.intro && <p className="cms-lines">{settings.intro}</p>}
+        <div className="hero-actions">
+          <ContentAction link={home.hero.primary} settings={settings} className="button" />
+          <ContentAction link={home.hero.secondary} settings={settings} arrow="right" />
+        </div>
+        {home.hero.note && <div className="hero-note"><span className="dot" />{home.hero.note}</div>}
+      </div>
+      {(settings.heroImage || settings.heroVideo) && <div className="hero-visual">
+        <div className="hero-photo">
+          {settings.heroVideo
+            ? <MediaVideo preview={preview} src={settings.heroVideo} controls playsInline poster={settings.heroImage || undefined} preload="metadata" aria-label={home.hero.imageAlt} />
+            : <MediaImage preview={preview} src={settings.heroImage} alt={home.hero.imageAlt} fetchPriority="high" />}
+          {(home.hero.photoLabel || home.hero.photoLabelEn) && <div className="photo-label">
+            <span>{home.hero.photoLabelEn}</span><b>{home.hero.photoLabel}</b>
+          </div>}
+        </div>
+        {(home.hero.visualLeft || home.hero.visualRight) && <div className="visual-bottom">
+          <span>{home.hero.visualLeft}</span><span>{home.hero.visualRight}{home.hero.visualRight && <ArrowUpRight size={17} />}</span>
+        </div>}
+        {home.hero.imageCredit && <div className="image-credit cms-lines">{home.hero.imageCredit}</div>}
+      </div>}
+    </section>,
+    stats: (stats.length > 0 || home.stats.statement) && <section className="stats wrap configurable-stats" id="stats"
+      style={{ "--stat-columns": Math.max(1, Math.min(4, stats.length + (home.stats.statement ? 1 : 0))) } as CSSProperties} aria-label="数据概览">
+      {stats.map((item) => <div key={item.id}><strong>{item.value}{item.unit && <span>{item.unit}</span>}</strong><p>{item.label}</p></div>)}
+      {home.stats.statement && <div className="stats-statement cms-lines">{home.stats.statement}</div>}
+    </section>,
+    research: <section className="research section wrap" id="research">
+      <Heading heading={home.research.heading} />
+      {directions.length > 0 && <div className="research-grid cms-grid" style={columns(Math.min(home.research.columns, directions.length))}>
+        {directions.map((direction, index) => <SiteLink href={"/research/" + direction.id} key={direction.id} className="research-item">
+          <div className="research-top"><DirectionIcon index={index} /><span>{direction.number}</span></div>
+          {direction.en && <small>{direction.en}</small>}<h3>{direction.title}</h3>
+          {direction.desc && <p className="cms-lines">{direction.desc}</p>}
+          <div className="tags">{direction.tags.map((tag, tagIndex) => <span key={tagIndex}>{tag}</span>)}</div>
+          <span className="research-arrow"><ArrowUpRight size={22} /></span>
+        </SiteLink>)}
+      </div>}
+    </section>,
+    platforms: <section className="platform-section" id="platforms"><div className="wrap section">
+      <Heading heading={home.platforms.heading} />
+      {platforms.length > 0 && <div className="platform-grid cms-grid" style={columns(Math.min(home.platforms.columns, platforms.length))}>
+        {platforms.map((platform) => <article key={platform.id} className="platform">
+          {platform.image && <MediaImage preview={preview} src={platform.image} alt={platform.imageAlt || platform.title} loading="lazy" />}
+          <div className="platform-content">
+            <div>{platform.kind && <small>{platform.kind}</small>}<h3>{platform.title}{platform.subtitle && <span>{platform.subtitle}</span>}</h3></div>
+            {platform.count && <b>{platform.count}{platform.unit && <span>{platform.unit}</span>}</b>}
+            {platform.description && <p className="cms-lines">{platform.description}</p>}
+            <ContentAction link={platform.link} settings={settings} />
+          </div>
+        </article>)}
+      </div>}
+      {(home.platforms.note || home.platforms.sources.some((link) => link.enabled)) && <div className="platform-note">
+        {home.platforms.note && <span className="cms-lines">{home.platforms.note}</span>}
+        <div className="platform-sources">{home.platforms.sources.map((link, index) => <ContentAction key={index} link={link} settings={settings} arrow="none" />)}</div>
+      </div>}
+    </div></section>,
+    stories: <section className="section wrap" id="stories">
+      <Heading heading={home.stories.heading}><ContentAction link={home.stories.moreLink} settings={settings} arrow="right" /></Heading>
+      {shownArticles.length > 0 && <div className="article-grid cms-grid" style={columns(home.stories.columns)}>
+        {shownArticles.map((article) => <ArticleCard key={article.id} article={article} display={settings.articles} preview={preview} />)}
+      </div>}
+    </section>,
+    gallery: gallery.length > 0 && <section className="media-section section wrap" id="media">
+      <Heading heading={home.gallery.heading} />
+      <div className="media-grid cms-grid" style={columns(home.gallery.columns)}>{gallery.map((item) => <figure key={item.id}>
+        {item.type === "video" ? <MediaVideo preview={preview} controls playsInline preload="metadata" src={item.url} aria-label={item.caption || "视频"} />
+          : item.href ? <SiteLink href={item.href}><MediaImage preview={preview} src={item.url} alt={item.caption} loading="lazy" /></SiteLink>
+          : <MediaImage preview={preview} src={item.url} alt={item.caption} loading="lazy" />}
+        {item.caption && <figcaption>{item.type === "video" && item.href ? <SiteLink href={item.href}>{item.caption}</SiteLink> : item.caption}</figcaption>}
+      </figure>)}</div>
+    </section>,
+    banner: <section className="join-banner wrap" id="banner"><div>
+      {home.banner.eyebrow && <Eyebrow>{home.banner.eyebrow}</Eyebrow>}
+      {home.banner.title && <h2 className="cms-lines">{home.banner.title}</h2>}
+      {home.banner.description && <p className="cms-lines">{home.banner.description}</p>}
+      <ContentAction link={home.banner.button} settings={settings} className="button white" />
+    </div>{home.banner.symbol && <div className="join-symbol" aria-hidden="true">{home.banner.symbol}<span>{home.banner.symbolCaption}</span></div>}</section>,
+  };
+  return <div className="home-content">
+    {error && <div className="wrap home-error"><ErrorNotice error={error} /></div>}
+    {home.modules.filter((module) => module.enabled).map((module) => <div key={module.id} className={"home-module home-module-" + module.id} data-home-module={module.id}>{modules[module.id]}</div>)}
+  </div>;
+}
+
+export default function Home({ preview = false }: { preview?: boolean }) {
+  const { settings, articles, error } = usePublic();
+  return <Frame preview={preview}><HomeContent settings={settings} articles={articles} error={error} preview={preview} /></Frame>;
+}

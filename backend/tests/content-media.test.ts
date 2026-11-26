@@ -80,7 +80,7 @@ test("invalid upload magic and oversized JSON are rejected without creating publ
     const badChunk = await worker.fetch(req(`admin/media/chunk?id=${start.id}&part=1`, { token: session.token, raw: new Uint8Array([1, 2, 3, 4]) }), f.env);
     assert.equal(badChunk.status, 400);
     assert.equal((await worker.fetch(req("admin/media/complete", { token: session.token, body: { id: start.id } }), f.env)).status, 400);
-    assert.equal((await worker.fetch(req("admin/settings", { token: session.token, body: { intro: "x".repeat(100001) } }), f.env)).status, 413);
+    assert.equal((await worker.fetch(req("admin/settings", { token: session.token, body: { intro: "x".repeat(256001) } }), f.env)).status, 413);
     assert.equal((await worker.fetch(req("admin/media/cancel", { token: session.token, body: { id: start.id } }), f.env)).status, 200);
     assert.equal(f.bucket.objects.size, 0);
   } finally { f.database.close(); }

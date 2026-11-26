@@ -6,20 +6,28 @@
 
 **当前线上展示地址：<https://halfblood12312300-cell.github.io/csu-robotics-lab/>**
 
-不依赖 R2 的提交 `91945827c61575649acf87ed4a855501ec5b2cf4` 已通过 GitHub Pages 发布（[Actions 运行 45791152634](https://github.com/halfblood12312300-cell/csu-robotics-lab/actions/runs/45791152634)），同一提交的 Cloudflare Workers Builds 也已成功。用户截图确认正式 Worker 地址为 <https://csu-robotics-api.half-blood12312300.workers.dev>，其 [`/api/data` 公开读取接口](https://csu-robotics-api.half-blood12312300.workers.dev/api/data)已在浏览器实际返回网站设置和 3 篇公开文章，报名开关为关闭。前端接入配置使用这个地址；本次接入发布、`ADMIN_KEY_HASH` 配置以及管理员登录和写入仍待验证。历史报名、生产文章和上传素材尚未迁移。
+前端已接入正式 Worker <https://csu-robotics-api.half-blood12312300.workers.dev>。文章、首页配置、报名表和报名记录由独立后端管理；日常修改文字、布局与报名问题无需再次提交代码。历史报名、生产文章和上传素材不会随源码自动迁移，具体核验范围见 [迁移状态](docs/migration-status.md)。
 
 ## 网站内容
 
 - 仅顶部“加入我们”进入招新报名。
-- 四个研究方向进入独立展示页：专用智能体、语言模型微调、机器人功能模块、计算机视觉。
+- 初始四个研究方向进入独立展示页：专用智能体、语言模型微调、机器人功能模块、计算机视觉；后台可新增、修改、排序或隐藏方向。
 - 实验平台、项目动态、文章和影像分别展示相关内容。
-- 后台保留文章草稿与发布、网站设置、报名筛选与 CSV 导出，并可选择随前端发布的仓库素材。
+- 后台可编辑站点名称、导航与页脚、首页全部内容模块、主题和布局；支持保存前预览。
+- 报名表支持 11 种问题类型，可调整标题、说明、必填、选项、顺序及显示状态；旧报名保留提交时的问题与答案。
+- 保留文章草稿与发布、报名筛选与 CSV 导出，并可选择随前端发布的仓库素材。
 - 图片和短视频通过 GitHub 仓库上传；网站后台提供素材选择和预览，不代持 GitHub 写入令牌。
 - 管理员使用独立后端验证的访问密钥登录，不再依赖原平台的身份请求头。
 
 前端采用 `#/...` 路由。例如研究方向地址为 `.../csu-robotics-lab/#/research/agent`。接通后端后，文章详情可读取后端数据，后台新发布文章不需要为每个文章 ID 重新生成 HTML。
 
-## 后续更新展示页面
+## 日常修改网站
+
+登录[管理员后台](https://halfblood12312300-cell.github.io/csu-robotics-lab/#/admin?section=settings)，进入 **网站设置**。首页、研究展示、版面和报名表使用普通表单编辑，点击 **预览未保存修改** 检查桌面与手机尺寸，再点击 **保存并发布设置**。文章正文在 **文章管理** 中维护。
+
+详细操作、各分组可编辑的内容以及历史报名的处理规则见 [后台内容维护说明](docs/site-editor.md)。
+
+## 更新代码或上传新素材
 
 本仓库 **Settings → Pages → Build and deployment → Source** 已设为 **GitHub Actions**。
 
@@ -41,7 +49,7 @@
 }
 ```
 
-这项配置随 Pages 发布后生效。公开读取接口已经验证，接下来需确认前端接入以及后台登录和写入。地址不追加 `/api`，也不附带任何密钥或 Token。
+该前端配置已随 Pages 发布并接通公开读取接口。地址不追加 `/api`，也不附带任何密钥或 Token。管理员在 Cloudflare 配置运行时 Secret 后，使用自己的访问密钥登录后台。
 
 也可以按 [部署说明](docs/deployment.md) 使用本机 Wrangler，或改用 GitHub 仓库变量 `VITE_API_BASE_URL`。改用构建变量时需将运行时配置改为 `{}`；运行时 `apiBaseUrl` 字符串优先于该变量。
 
@@ -75,8 +83,11 @@ npm run build
 | 路径 | 用途 |
 | --- | --- |
 | `app/` | 展示页面、表单和管理界面 |
-| `app/content.ts` | 默认介绍、初始文章与基础设置 |
-| `app/research/content.ts` | 四个研究方向的固定展示内容 |
+| `app/content.ts` | 文章与素材类型、初始文章 |
+| `app/site-config.ts` | 首页与报名配置类型、默认内容、旧设置兼容 |
+| `app/settings-schema.ts` | 前后端共用的网站设置校验 |
+| `app/admin/components/settings-*.tsx` | 分组编辑器与真实页面预览 |
+| `app/research/content.ts` | 初始四个研究方向的默认展示内容 |
 | `public/media/` | 随前端发布并自动收录的公开图片和短视频 |
 | `backend/` | 独立 Worker API、认证、迁移和部署配置 |
 | `.github/workflows/pages.yml` | 检查、构建与 Pages 发布流程 |
