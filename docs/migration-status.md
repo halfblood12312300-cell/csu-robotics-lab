@@ -6,19 +6,31 @@
 
 | 项目 | 本次结果 |
 | --- | --- |
-| 前端与独立后端迁移代码 | 已完成，随本源码包交付 |
+| 前端与独立后端迁移代码 | 已完成并提交仓库；独立后端尚未生产部署 |
 | TypeScript 类型检查、前端生产构建 | 已通过 |
 | 后端自动化测试 | 9 项通过 |
 | Worker 构建预检 | 已通过 Wrangler dry-run |
-| GitHub 应用安装 | 已确认安装在 `halfblood12312300-cell` 账户；仓库写入权限仍待本次实际提交核验 |
-| GitHub 源码提交 | 尚待本次验证；当前核验时远端仍为初始 README |
-| GitHub Pages 发布 | 尚待本次验证，不能把预计网址当作已上线地址 |
+| GitHub 应用安装与写入 | 安装已确认，源码提交已成功 |
+| GitHub 源码提交 | 56 个文件已提交到 `main`，首次迁移提交为 `2875a1c4cb3f9de4db1e183d8be318fb1d587607` |
+| GitHub Pages 发布 | 已成功；Actions 运行 `45747985976` 第 2 次尝试中，检查、构建和部署均成功 |
+| Pages 发布来源 | 已在仓库设置中设为 `GitHub Actions` |
 | Cloudflare 生产部署、原站数据迁移 | 尚未执行，需落实用户账号授权及真实资源 |
-| 浏览器端实际交互检查 | 本次环境的浏览器连接与预览服务不可用，尚未完成 |
+| 桌面浏览器实际交互检查 | 已完成，正式地址、研究卡片、文章与禁用状态已验证 |
+| 手机端检查 | 已完成静态 CSS 检查，并修正短屏菜单的高度与滚动；尚未进行手机浏览器实测 |
 
-目标仓库已核实为 `halfblood12312300-cell/csu-robotics-lab`。此前连接未返回可用的 GitHub 应用安装记录，首次写入也曾返回 `403 Resource not accessible by integration`，当时没有向仓库上传文件或更新分支。这是历史阻塞记录，不再据此判断当前安装状态。
+**已上线地址：<https://halfblood12312300-cell.github.io/csu-robotics-lab/>**。该地址已实际打开确认。发布证据见[源码提交](https://github.com/halfblood12312300-cell/csu-robotics-lab/commit/2875a1c4cb3f9de4db1e183d8be318fb1d587607)和[成功的 Actions 运行](https://github.com/halfblood12312300-cell/csu-robotics-lab/actions/runs/45747985976)（第 2 次尝试）。
 
-用户随后完成应用安装；本次已确认账户 `halfblood12312300-cell` 的安装记录，安装 ID 为 `185987845`。安装确认后、上传源码前的核验结果为：远端仍只有初始 README，`main` 指向 `5cc18dec82caa2174e61f22219ebbc3e4b25abda`。安装成功不等于源码已提交或 Pages 已发布；这些结果须以本次实际提交、Actions 运行和公开地址访问验证为准。
+历史说明：最初没有可用的 GitHub 应用安装记录，首次写入曾返回 `403 Resource not accessible by integration`。用户随后完成安装，已确认账户 `halfblood12312300-cell` 的安装 ID 为 `185987845`，并已成功提交源码和发布前端；该权限阻塞现已解除。
+
+## 已完成的线上交互验证
+
+- 逐一点击四个研究卡片，分别进入 `#/research/agent`、`#/research/model`、`#/research/system` 和 `#/research/vision` 展示页。
+- 文章列表和 `platforms` 文章详情均可打开，刷新后保留当前页面。
+- 首页只有顶部一个“加入我们”报名链接；其他展示模块不再统一跳转到招新报名。
+- 图片正常显示，桌面页面没有横向溢出。
+- 报名页和管理页明确显示尚未启用，提交或登录操作已禁用。
+
+以上结果来自桌面浏览器检查。手机端尚未完成实际浏览器验证；已在窄屏菜单增加视口高度限制与内部纵向滚动，解决较矮视口中最后一项可能无法到达的问题。这是基于静态 CSS 检查的修正，不能据此宣称手机端已完成实际验收。
 
 ## 已确定的部署边界
 

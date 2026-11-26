@@ -1,10 +1,12 @@
 # CSU 机器人实验室网站
 
-中南大学数学与统计学院机器人实验室的展示网站。前端使用 GitHub Pages，报名、内容管理和素材接口由独立的 Cloudflare Workers 后端提供，文章与报名数据保存在 D1，上传文件保存在 R2。
+中南大学数学与统计学院机器人实验室的展示网站。展示前端已发布到 GitHub Pages。独立后端源码使用 Cloudflare Workers 提供报名、内容管理和素材接口，使用 D1 保存文章与报名数据、R2 保存上传文件。
 
 仓库：<https://github.com/halfblood12312300-cell/csu-robotics-lab>
 
-GitHub Pages 配置成功后使用的地址：`https://halfblood12312300-cell.github.io/csu-robotics-lab/`。该地址是否已经上线，以仓库 **Actions → Deploy GitHub Pages** 的成功结果为准；提交源码本身不代表已经完成发布。
+**当前线上展示地址：<https://halfblood12312300-cell.github.io/csu-robotics-lab/>**
+
+GitHub Pages 已部署成功，并已实际打开验证。当前 Cloudflare 后端尚未授权、创建生产资源或部署，线上网站使用内置展示内容；在线报名和后台登录显示“暂未启用”，相关操作已禁用。历史报名、生产文章和上传素材尚未迁移。
 
 ## 网站内容
 
@@ -14,13 +16,15 @@ GitHub Pages 配置成功后使用的地址：`https://halfblood12312300-cell.gi
 - 后台保留文章草稿与发布、素材分段上传、网站设置、报名筛选与 CSV 导出等功能。
 - 管理员使用独立后端验证的访问密钥登录，不再依赖原平台的身份请求头。
 
-前端采用 `#/...` 路由。例如研究方向地址为 `.../csu-robotics-lab/#/research/agent`。文章详情由后端数据决定，因此后台新发布文章后，不需要为每个文章 ID 重新生成 HTML。
+前端采用 `#/...` 路由。例如研究方向地址为 `.../csu-robotics-lab/#/research/agent`。接通后端后，文章详情可读取后端数据，后台新发布文章不需要为每个文章 ID 重新生成 HTML。
 
-## 先发布展示页面
+## 后续更新展示页面
 
-1. 打开本仓库 **Settings → Pages**，将 **Build and deployment → Source** 设为 **GitHub Actions**。
-2. 在 **Actions → Build and deploy CSU Robotics Lab** 中运行工作流，或向 `main` 提交代码。
-3. 工作流完成类型检查、后端边界测试和前端构建后发布 `dist/`，成功结果中会给出正式网址。
+本仓库 **Settings → Pages → Build and deployment → Source** 已设为 **GitHub Actions**。
+
+1. 向 `main` 提交更新；也可以在 **Actions → Build and deploy CSU Robotics Lab** 中手动运行工作流。
+2. 工作流完成类型检查、后端边界测试和前端构建后发布 `dist/`。
+3. 确认 **Deploy GitHub Pages** 成功，再打开正式网址检查更新内容。
 
 不配置后端也可以浏览内置实验室介绍和研究展示；此时报名和后台登录会明确显示尚未启用，不会伪造提交成功。
 
