@@ -2,7 +2,7 @@
 
 这个流程继续使用现有仓库 `halfblood12312300-cell/csu-robotics-lab`。前端和公开图片、短视频由 GitHub Pages 发布，Cloudflare Workers 与 D1 负责报名、文章和网站设置。默认不启用 R2，无需在电脑安装 Node.js。
 
-当前准备好的代码尚未代表后端已上线。第一次设置需要账号持有人在 Cloudflare 完成仓库授权、构建权限和管理员 Secret 录入。用户此前的日志已经确认三项 D1 迁移成功，但 Worker 在 R2 未开通处失败；本次改动移除默认 R2 依赖，后续必须查看最新提交对应的构建结果。
+本项目已完成仓库授权和三项 D1 迁移；无 R2 提交 `91945827c61575649acf87ed4a855501ec5b2cf4` 的 Pages 发布与 Workers Builds 均已成功。正式 Worker 地址已确认，公开读取接口也已在浏览器实际返回数据；当前仍需验证本次前端接入、`ADMIN_KEY_HASH` 配置、管理员登录与写入。完整发布记录见 [上线确认](migration-status.md)，现有项目无需重新创建。
 
 ## 1. 连接现有 GitHub 仓库
 
@@ -72,9 +72,13 @@ Worker 部署成功后，打开前端发布的 [后台密钥设置工具](https:
 
 ## 5. 把实际后端地址接入前端
 
-复制 Cloudflare 部署结果中实际显示的 HTTPS Worker 根地址，格式通常为 `https://csu-robotics-api.<账号子域>.workers.dev`。这里的 `<账号子域>` 是占位说明，不能原样填写。
+用户截图确认本项目的正式 Worker 根地址为：
 
-可以把这个**公开后端地址**交给网站维护者，由维护者更新仓库的 `public/runtime-config.json`，提交后 Pages 会自动重新发布。也可按 [deployment.md](deployment.md) 设置 GitHub 仓库变量 `VITE_API_BASE_URL`。
+<https://csu-robotics-api.half-blood12312300.workers.dev>
+
+该地址的 [`/api/data`](https://csu-robotics-api.half-blood12312300.workers.dev/api/data) 已在浏览器实际返回网站设置和 3 篇公开文章，`registrationOpen=false`。公开读取接口可达，无需因截图中的开关颜色重复调整域名设置。
+
+仓库的 `public/runtime-config.json` 已使用该公开根地址，提交后由 Pages 重新发布。若以后改用 GitHub 仓库变量 `VITE_API_BASE_URL`，需把运行时文件改为 `{}` 才会回退到构建变量，详见 [deployment.md](deployment.md)。
 
 地址末尾不添加 `/api`，不附带密钥。接入后先验证读取数据、后台登录、文章保存、仓库素材选择与播放，再由管理员检查招新内容和截止时间并开启报名。默认报名保持关闭，不会因为部署后端而自动开始收集报名。
 

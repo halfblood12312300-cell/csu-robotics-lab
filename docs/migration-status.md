@@ -6,25 +6,28 @@
 
 | 项目 | 本次结果 |
 | --- | --- |
-| 前端与独立后端迁移代码 | 初始迁移已提交；本次默认调整为不依赖 R2，后端尚未确认成功上线 |
+| 前端与独立后端迁移代码 | 不依赖 R2 的版本已提交；Pages 与 Workers Builds 均成功，公开读取接口已返回数据，登录及写入验收待完成 |
 | 无 R2 适配检查 | TypeScript、前端生产构建、15 项自动化测试及 Worker dry-run 已通过；默认构建只绑定 D1，不配置 R2 |
 | GitHub 应用安装与写入 | 安装已确认，源码提交已成功 |
-| GitHub 源码提交 | 首次迁移提交为 `2875a1c4cb3f9de4db1e183d8be318fb1d587607`，后续部署配置已陆续更新 |
-| GitHub Pages 发布 | 已成功；Actions 运行 `45747985976` 第 2 次尝试中，检查、构建和部署均成功 |
+| GitHub 源码提交 | 已验证的无 R2 提交为 `91945827c61575649acf87ed4a855501ec5b2cf4` |
+| GitHub Pages 发布 | 该提交的 Actions 运行 `45791152634` 已成功；本次接入正式 API 地址后的发布需另行确认 |
 | Pages 发布来源 | 已在仓库设置中设为 `GitHub Actions` |
-| Cloudflare GitHub 连接 | 用户已在自己的普通浏览器连接仓库并开始构建 |
+| Cloudflare GitHub 连接 | 已连接本仓库，Workers Builds 已成功构建并部署上述提交 |
 | Cloudflare D1 初始化 | 用户提供的日志显示 `0000`、`0001`、`0002` 三项迁移均成功 |
-| Cloudflare Worker 首次部署 | 在 R2 未开通处失败，错误码 `10042`；尚未确认可用后端地址 |
+| Cloudflare Worker 部署 | 无 R2 提交构建成功，版本 `4b1b4839-6b3f-403e-8655-97bb6c293b7e`；此前的 R2 错误 `10042` 已不再阻塞这次构建 |
+| 正式 Worker 地址 | 用户截图确认 `https://csu-robotics-api.half-blood12312300.workers.dev`；浏览器实际打开 `/api/data` 已成功返回 JSON |
+| 公开 API 读取 | 返回网站设置与 3 篇公开文章，`registrationOpen=false`；尚未执行管理员登录或写入验证 |
+| 前端 API 配置 | `public/runtime-config.json` 使用上述根地址；`ADMIN_KEY_HASH` 配置及端到端登录仍待确认 |
 | 当前部署方案 | Workers 与 D1；图片、短视频通过 `public/media/` 随 GitHub Pages 发布，默认不使用 R2 |
 | 原站数据迁移 | 尚未执行；D1 建表成功不代表历史记录已迁移 |
-| 桌面浏览器实际交互检查 | 已完成，正式地址、研究卡片、文章与禁用状态已验证 |
+| 桌面浏览器实际交互检查 | 接入后端前的展示地址、研究卡片、文章与禁用状态已验证；接入后的端到端流程待验证 |
 | 手机端检查 | 已完成静态 CSS 检查，并修正短屏菜单的高度与滚动；尚未进行手机浏览器实测 |
 
-**已上线地址：<https://halfblood12312300-cell.github.io/csu-robotics-lab/>**。该地址已实际打开确认。发布证据见[源码提交](https://github.com/halfblood12312300-cell/csu-robotics-lab/commit/2875a1c4cb3f9de4db1e183d8be318fb1d587607)和[成功的 Actions 运行](https://github.com/halfblood12312300-cell/csu-robotics-lab/actions/runs/45747985976)（第 2 次尝试）。
+**已上线地址：<https://halfblood12312300-cell.github.io/csu-robotics-lab/>**。展示地址此前已实际打开确认。无 R2 版本的发布证据见[源码提交](https://github.com/halfblood12312300-cell/csu-robotics-lab/commit/91945827c61575649acf87ed4a855501ec5b2cf4)和[成功的 Actions 运行](https://github.com/halfblood12312300-cell/csu-robotics-lab/actions/runs/45791152634)。这些结果不代替正式 API 地址接入后的功能检查。
 
 历史说明：最初没有可用的 GitHub 应用安装记录，首次写入曾返回 `403 Resource not accessible by integration`。用户随后完成安装，已确认账户 `halfblood12312300-cell` 的安装 ID 为 `185987845`，并已成功提交源码和发布前端；该权限阻塞现已解除。
 
-## 已完成的线上交互验证
+## 接入后端前已完成的线上交互验证
 
 - 逐一点击四个研究卡片，分别进入 `#/research/agent`、`#/research/model`、`#/research/system` 和 `#/research/vision` 展示页。
 - 文章列表和 `platforms` 文章详情均可打开，刷新后保留当前页面。
@@ -47,9 +50,9 @@
 
 本次交付的代码可以独立构建前端和后端。代码提交、前端发布、后端资源创建及旧站数据迁移分别是独立步骤；不得用其中一个成功状态代替其他步骤的结果。
 
-Cloudflare 账号授权与 D1 建表已取得实际进展，Worker 仍需使用本次无 R2 配置完成新的构建。必须核对最新构建使用的提交号，避免再次部署仍含 R2 绑定的旧版本。前端在未接通后端时提供内置介绍和研究方向展示，并明确关闭在线报名与后台登录。
+Cloudflare 账号授权、D1 建表和无 R2 Worker 构建已确认成功。正式地址的 [`/api/data`](https://csu-robotics-api.half-blood12312300.workers.dev/api/data) 已在浏览器实际返回网站设置和 3 篇公开文章，`registrationOpen=false`。前端运行时配置已指定该根地址；本次 Pages 发布与接入后的登录、文章管理和报名读写结果仍需分别核验。
 
-账号持有人已能在自己的普通浏览器操作 Cloudflare，后续继续使用该控制台，无需再登录对话内浏览器。操作步骤见 [cloudflare-browser.md](cloudflare-browser.md)。默认管理员登录只需 `ADMIN_KEY_HASH`；当前没有证据表明生产 Secret 已配置或后端已成功上线。
+账号持有人已能在自己的普通浏览器操作 Cloudflare，后续继续使用该控制台，无需再登录对话内浏览器。操作步骤见 [cloudflare-browser.md](cloudflare-browser.md)。默认管理员登录只需 `ADMIN_KEY_HASH`；当前尚未确认生产 Secret 配置以及端到端登录、文章管理和报名读写结果，不能据此宣称后端已完成验收。
 
 ## 保留的内容与行为
 

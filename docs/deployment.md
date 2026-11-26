@@ -4,6 +4,8 @@
 
 **希望只使用自己的普通浏览器操作：** 参见 [Cloudflare 控制台部署](cloudflare-browser.md)。该流程使用同一个 GitHub 仓库和 Cloudflare Workers Builds，不要求对话内浏览器具备登录状态。以下保留本机命令行部署流程。
 
+当前提交 `91945827c61575649acf87ed4a855501ec5b2cf4` 的 Pages 发布和 Workers Builds 均已成功。正式 Worker 地址已确认，公开读取接口也已在浏览器实际返回数据；本次前端接入、管理员 Secret、登录与写入仍待验证。现有项目无需重新创建，详细状态见 [上线确认](migration-status.md)。
+
 ## 一、启用 GitHub Pages
 
 1. 打开 [仓库 Pages 设置](https://github.com/halfblood12312300-cell/csu-robotics-lab/settings/pages)。
@@ -59,25 +61,19 @@ GitHub Pages 与后端是两项独立服务。当前选择不使用 R2，避免�
 
 ## 三、连接前端与后端
 
-在仓库 **Settings → Secrets and variables → Actions → Variables** 新增仓库变量 `VITE_API_BASE_URL`，值为上一步实际部署的后端 HTTPS 根地址，然后重新运行 Pages 工作流。
-
-示例格式如下，其中尖括号内容必须换成真实值：
-
-```text
-VITE_API_BASE_URL=https://<实际的 Worker 主机名>
-```
-
-不要在末尾添加 `/api`、管理员访问密钥或访问令牌。前端会按需追加 `/api/data`、`/api/login` 等路径。`VITE_` 变量会被编译进公开网页，只能放公开配置。
-
-另一种方式是修改仓库已有的 `public/runtime-config.json`：
+当前仓库通过 `public/runtime-config.json` 接入用户截图确认的正式 Worker 地址：
 
 ```json
 {
-  "apiBaseUrl": "https://<实际的 Worker 主机名>"
+  "apiBaseUrl": "https://csu-robotics-api.half-blood12312300.workers.dev"
 }
 ```
 
-仓库默认的运行时文件内容为 `{}`，会使用构建变量 `VITE_API_BASE_URL`。文件不存在、无法读取或不包含字符串类型的 `apiBaseUrl` 时，同样使用构建变量。运行时文件中的 `apiBaseUrl` 字符串优先于构建变量；只有 `{"apiBaseUrl":""}` 才表示明确停用后端。使用仓库变量配置时，保留默认的 `{}` 即可。
+配置提交并通过 Pages 发布后生效。该地址的 `/api/data` 已在浏览器实际返回网站设置和 3 篇公开文章，报名开关为关闭；这项读取验证不代表 `ADMIN_KEY_HASH` 已配置，也不代替管理员登录和写入验证。
+
+如需改用构建变量，将 `public/runtime-config.json` 改为 `{}`，再到仓库 **Settings → Secrets and variables → Actions → Variables** 设置 `VITE_API_BASE_URL` 为实际后端 HTTPS 根地址，并重新运行 Pages 工作流。运行时文件不存在、无法读取或不包含字符串类型的 `apiBaseUrl` 时，也会回退到该变量；运行时 `apiBaseUrl` 字符串优先于构建变量，`{"apiBaseUrl":""}` 表示明确停用后端。
+
+地址末尾不添加 `/api`、管理员访问密钥或访问令牌。前端会按需追加 `/api/data`、`/api/login` 等路径。运行时文件与 `VITE_` 变量都是公开配置，只能放公开地址。
 
 接入后依次检查：
 
@@ -97,7 +93,7 @@ npx wrangler d1 migrations apply DB --local --config backend/wrangler.local.json
 npx wrangler dev --config backend/wrangler.local.jsonc --port 8787
 ```
 
-另一个终端设置本地前端 API 地址：
+本地开发前，临时将 `public/runtime-config.json` 改为 `{}`，让下面的本地环境变量生效；否则其中的生产地址会覆盖本地地址。这项临时修改不要提交，结束本地开发后恢复上述正式地址。另一个终端设置本地前端 API 地址：
 
 ```bash
 VITE_API_BASE_URL=http://localhost:8787 npm run dev -- --host localhost --port 5173

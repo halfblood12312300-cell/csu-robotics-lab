@@ -6,7 +6,7 @@
 
 **当前线上展示地址：<https://halfblood12312300-cell.github.io/csu-robotics-lab/>**
 
-GitHub Pages 已部署成功，并已实际打开验证。Cloudflare 已连接本仓库，用户提供的构建日志显示三项 D1 数据库迁移成功；此前 Worker 部署在 R2 未开通处停止。当前改为不依赖 R2，后端是否成功上线仍需核对这次修改对应的最新构建和实际 API 地址。前端尚未接入有效后端时继续使用内置展示内容，在线报名与后台登录保持禁用。历史报名、生产文章和上传素材尚未迁移。
+不依赖 R2 的提交 `91945827c61575649acf87ed4a855501ec5b2cf4` 已通过 GitHub Pages 发布（[Actions 运行 45791152634](https://github.com/halfblood12312300-cell/csu-robotics-lab/actions/runs/45791152634)），同一提交的 Cloudflare Workers Builds 也已成功。用户截图确认正式 Worker 地址为 <https://csu-robotics-api.half-blood12312300.workers.dev>，其 [`/api/data` 公开读取接口](https://csu-robotics-api.half-blood12312300.workers.dev/api/data)已在浏览器实际返回网站设置和 3 篇公开文章，报名开关为关闭。前端接入配置使用这个地址；本次接入发布、`ADMIN_KEY_HASH` 配置以及管理员登录和写入仍待验证。历史报名、生产文章和上传素材尚未迁移。
 
 ## 网站内容
 
@@ -33,13 +33,17 @@ GitHub Pages 已部署成功，并已实际打开验证。Cloudflare 已连接�
 
 如果自己的普通浏览器已经能登录 Cloudflare，可按 [浏览器部署说明](docs/cloudflare-browser.md) 连接本仓库，由 Cloudflare Workers Builds 创建或复用数据库、执行迁移并发布后端。仓库已提供后端专用的根目录 `wrangler.jsonc` 和 `npm run backend:deploy:cloudflare` 命令。默认只使用 Workers 与 D1，不需要为了这个网站开通 R2；创建页已列出 `D1 Storage (edit)` 时，可直接使用自动生成的构建令牌。管理员登录在默认模式下只需配置运行时 Secret `ADMIN_KEY_HASH`。
 
-也可以按 [部署说明](docs/deployment.md) 使用本机 Wrangler 创建自己的 Cloudflare 后端。获得实际后端地址后，在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 添加：
+当前仓库通过 `public/runtime-config.json` 接入已确认的正式地址：
 
-```text
-VITE_API_BASE_URL = Cloudflare 实际返回的后端 HTTPS 根地址
+```json
+{
+  "apiBaseUrl": "https://csu-robotics-api.half-blood12312300.workers.dev"
+}
 ```
 
-填写后端根地址，不要追加 `/api`。这是公开配置，只能填写地址；管理员访问密钥、会话、Cloudflare API Token 都不能写入该变量。修改变量后重新运行 Pages 工作流。
+这项配置随 Pages 发布后生效。公开读取接口已经验证，接下来需确认前端接入以及后台登录和写入。地址不追加 `/api`，也不附带任何密钥或 Token。
+
+也可以按 [部署说明](docs/deployment.md) 使用本机 Wrangler，或改用 GitHub 仓库变量 `VITE_API_BASE_URL`。改用构建变量时需将运行时配置改为 `{}`；运行时 `apiBaseUrl` 字符串优先于该变量。
 
 完整步骤、可选运行时配置、本地开发和故障定位见 [docs/deployment.md](docs/deployment.md)。部署边界和旧站数据迁移状态见 [docs/migration-status.md](docs/migration-status.md)。
 
