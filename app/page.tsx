@@ -1,6 +1,7 @@
 import { type CSSProperties, type ReactNode } from "react";
 import { SiteLink } from "./router";
 import { MediaImage, MediaVideo } from "./media";
+import { HeroCarousel } from "./hero-carousel";
 import { type Article } from "./content";
 import { type HomeModuleId, type SectionHeading, type Settings } from "./site-config";
 import {
@@ -26,7 +27,8 @@ export function HomeContent({ settings, articles, preview = false, error = "" }:
 }) {
   const { home } = settings;
   const directions = home.research.directions.filter((item) => item.enabled);
-  const platforms = home.platforms.items.filter((item) => item.enabled);
+  const platforms = home.projects.items.filter((item) => item.enabled);
+  const hasHeroMedia = !!(settings.heroImage || settings.heroVideo || home.hero.slides.some(slide => slide.enabled && slide.url));
   const stats = home.stats.items.filter((item) => item.enabled);
   const eligibleArticles = articles.filter((article) => article.status === "published" &&
     (!home.stories.excludeRecruitment || article.category !== "招新通知"));
@@ -43,7 +45,7 @@ export function HomeContent({ settings, articles, preview = false, error = "" }:
     })))).slice(0, home.gallery.limit);
 
   const modules: Record<HomeModuleId, ReactNode> = {
-    hero: <section className={"hero wrap hero-" + home.hero.layout + (!settings.heroImage && !settings.heroVideo ? " hero-no-media" : "")} id="about">
+    hero: <section className={"hero wrap hero-" + home.hero.layout + (!hasHeroMedia ? " hero-no-media" : "")} id="about">
       <div className="hero-copy">
         {home.hero.eyebrow && <Eyebrow>{home.hero.eyebrow}</Eyebrow>}
         <h1><span className="cms-lines">{home.hero.title}</span>{home.hero.highlight && <em className="hero-highlight cms-lines">{home.hero.highlight}</em>}</h1>
@@ -54,19 +56,11 @@ export function HomeContent({ settings, articles, preview = false, error = "" }:
         </div>
         {home.hero.note && <div className="hero-note"><span className="dot" />{home.hero.note}</div>}
       </div>
-      {(settings.heroImage || settings.heroVideo) && <div className="hero-visual">
-        <div className="hero-photo">
-          {settings.heroVideo
-            ? <MediaVideo preview={preview} src={settings.heroVideo} controls playsInline poster={settings.heroImage || undefined} preload="metadata" aria-label={home.hero.imageAlt} />
-            : <MediaImage preview={preview} src={settings.heroImage} alt={home.hero.imageAlt} fetchPriority="high" />}
-          {(home.hero.photoLabel || home.hero.photoLabelEn) && <div className="photo-label">
-            <span>{home.hero.photoLabelEn}</span><b>{home.hero.photoLabel}</b>
-          </div>}
-        </div>
+      {hasHeroMedia && <div className="hero-visual">
+        <HeroCarousel settings={settings} preview={preview} />
         {(home.hero.visualLeft || home.hero.visualRight) && <div className="visual-bottom">
           <span>{home.hero.visualLeft}</span><span>{home.hero.visualRight}{home.hero.visualRight && <ArrowUpRight size={17} />}</span>
         </div>}
-        {home.hero.imageCredit && <div className="image-credit cms-lines">{home.hero.imageCredit}</div>}
       </div>}
     </section>,
     stats: (stats.length > 0 || home.stats.statement) && <section className="stats wrap configurable-stats" id="stats"
@@ -87,10 +81,10 @@ export function HomeContent({ settings, articles, preview = false, error = "" }:
       </div>}
     </section>,
     platforms: <section className="platform-section" id="platforms"><div className="wrap section">
-      <Heading heading={home.platforms.heading} />
-      {platforms.length > 0 && <div className="platform-grid cms-grid" style={columns(Math.min(home.platforms.columns, platforms.length))}>
+      <Heading heading={home.projects.heading} />
+      {platforms.length > 0 && <div className="platform-grid cms-grid" style={columns(Math.min(home.projects.columns, platforms.length))}>
         {platforms.map((platform) => <article key={platform.id} className="platform">
-          {platform.image && <MediaImage preview={preview} src={platform.image} alt={platform.imageAlt || platform.title} loading="lazy" />}
+          {platform.image ? <MediaImage preview={preview} src={platform.image} alt={platform.imageAlt || platform.title} loading="lazy" /> : <div className="project-placeholder" aria-hidden="true"><DirectionIcon index={platform.id === "museum-guide" ? 1 : 2} /><span>PLANNED PROJECT</span></div>}
           <div className="platform-content">
             <div>{platform.kind && <small>{platform.kind}</small>}<h3>{platform.title}{platform.subtitle && <span>{platform.subtitle}</span>}</h3></div>
             {platform.count && <b>{platform.count}{platform.unit && <span>{platform.unit}</span>}</b>}
@@ -99,9 +93,9 @@ export function HomeContent({ settings, articles, preview = false, error = "" }:
           </div>
         </article>)}
       </div>}
-      {(home.platforms.note || home.platforms.sources.some((link) => link.enabled)) && <div className="platform-note">
-        {home.platforms.note && <span className="cms-lines">{home.platforms.note}</span>}
-        <div className="platform-sources">{home.platforms.sources.map((link, index) => <ContentAction key={index} link={link} settings={settings} arrow="none" />)}</div>
+      {(home.projects.note || home.projects.sources.some((link) => link.enabled)) && <div className="platform-note">
+        {home.projects.note && <span className="cms-lines">{home.projects.note}</span>}
+        <div className="platform-sources">{home.projects.sources.map((link, index) => <ContentAction key={index} link={link} settings={settings} arrow="none" />)}</div>
       </div>}
     </div></section>,
     stories: <section className="section wrap" id="stories">

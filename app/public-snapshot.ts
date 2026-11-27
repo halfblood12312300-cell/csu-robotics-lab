@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { settingsSchema } from "./settings-schema.ts";
 import { mediaUrlSchema } from "./content-urls.ts";
-import type { Article, Settings } from "./content.ts";
+import { normalizeSettings, type Article, type Settings } from "./content.ts";
 
 const article = z.object({
   id: z.string().regex(/^[a-zA-Z0-9-]{1,80}$/),
@@ -17,7 +17,8 @@ const snapshotSchema = publicResponse.extend({
 export type PublicSnapshot = { format: 1; capturedAt: number; settings: Settings; articles: Article[] };
 export function createPublicSnapshot(value: unknown, capturedAt: number): PublicSnapshot {
   // Allowlist all published content fields; reject responses containing unpublished articles.
-  return snapshotSchema.parse({ ...publicResponse.parse(value), format: 1, capturedAt }) as PublicSnapshot;
+  const parsed = publicResponse.parse(value);
+  return snapshotSchema.parse({ ...parsed, settings: normalizeSettings((value as { settings: unknown }).settings), format: 1, capturedAt }) as PublicSnapshot;
 }
 export function readPublicSnapshot(value: unknown): PublicSnapshot {
   return snapshotSchema.parse(value) as PublicSnapshot;

@@ -33,7 +33,7 @@ export function HomeSettingsEditor({ value: s, onChange: setS, pick }: SettingsE
       <h3>主要展示按钮</h3><LinkEditor value={s.home.hero.primary} onChange={(primary) => updateHero({ ...s.home.hero, primary })} />
       <h3>次要展示按钮</h3><LinkEditor value={s.home.hero.secondary} onChange={(secondary) => updateHero({ ...s.home.hero, secondary })} />
     </SettingPanel>
-    <SettingPanel title="首屏图片与视频" description="设置视频后会显示可播放的视频，图片同时作为封面；清除视频则恢复图片展示。">
+    <SettingPanel title="首屏轮播与视频" description="首张图片或视频沿用下方设置；可继续添加多张轮播图片，访客可左右滑动或点箭头查看。">
       <div className="editor-grid"><MediaField label="首页图片 / 视频封面" value={s.heroImage} onChange={(heroImage) => setS((prev) => ({ ...prev, heroImage }))} onPick={() => pick("image", (heroImage) => setS((prev) => ({ ...prev, heroImage })))} />
         <MediaField label="首页宣传视频" value={s.heroVideo} poster={s.heroImage} kind="video" onChange={(heroVideo) => setS((prev) => ({ ...prev, heroVideo }))} onPick={() => pick("video", (heroVideo) => setS((prev) => ({ ...prev, heroVideo })))} /></div>
       <TextFields value={s.home.hero} onChange={updateHero} fields={[
@@ -43,6 +43,17 @@ export function HomeSettingsEditor({ value: s, onChange: setS, pick }: SettingsE
         { key: "photoLabel", label: "图片内说明文字", maxLength: 250 }, { key: "photoLabelEn", label: "图片内上方小字", maxLength: 250 },
         { key: "visualLeft", label: "图片下方左侧文字", maxLength: 250 }, { key: "visualRight", label: "图片下方右侧文字", maxLength: 250 },
       ]} /></div>
+    </SettingPanel>
+    <SettingPanel title="轮播图片列表" description="首张图在上方编辑。下方图片可增删、隐藏、排序，并独立填写说明和来源。">
+      {s.home.hero.slides.map((slide,index) => {
+        const change = (next: typeof slide) => setS(prev => ({ ...prev, home: { ...prev.home, hero: { ...prev.home.hero, slides: prev.home.hero.slides.map(item => item.id === slide.id ? next : item) } } }));
+        return <ItemDetails key={slide.id} title={slide.alt || slide.caption || "轮播图片"} subtitle={slide.enabled ? "正在展示" : "已隐藏"} actions={<ItemControls label="轮播图片" index={index} count={s.home.hero.slides.length} onMove={offset => updateHero({ ...s.home.hero, slides: moveItem(s.home.hero.slides,index,offset) })} onRemove={() => updateHero({ ...s.home.hero, slides: s.home.hero.slides.filter(item => item.id !== slide.id) })} />}>
+          <ToggleField label="显示这张图片" value={slide.enabled} onChange={enabled => change({ ...slide, enabled })} />
+          <MediaField label="轮播图片" value={slide.url} onChange={url => change({ ...slide, url })} onPick={() => pick("image", url => setS(prev => ({ ...prev, home: { ...prev.home, hero: { ...prev.home.hero, slides: prev.home.hero.slides.map(item => item.id === slide.id ? { ...item, url } : item) } } })))} />
+          <TextFields value={slide} onChange={change} fields={[{ key: "alt", label: "图片内容说明", maxLength: 250 }, { key: "caption", label: "图片内文字", maxLength: 250 }, { key: "credit", label: "图片来源", maxLength: 250 }]} />
+        </ItemDetails>;
+      })}
+      <button type="button" className="button small outline editor-list-add" disabled={s.home.hero.slides.length >= 12} onClick={() => updateHero({ ...s.home.hero, slides: [...s.home.hero.slides, { id: createId("slide"), enabled: true, url: "", alt: "", caption: "", credit: "" }] })}><Plus size={15} />添加轮播图片</button>
     </SettingPanel>
     <SettingPanel title="数据概览" description="编辑数量、单位和说明。数据是展示内容，调整设备或方向数量后可在这里同步修改。">
       {s.home.stats.items.map((item, index) => <ItemDetails key={item.id} title={`${item.value}${item.unit} · ${item.label}`} subtitle={item.enabled ? "正在展示" : "已隐藏"} actions={<ItemControls label={item.label || "数据项"} index={index} count={s.home.stats.items.length} onMove={(offset) => updateStats({ ...s.home.stats, items: moveItem(s.home.stats.items, index, offset) })} onRemove={() => updateStats({ ...s.home.stats, items: s.home.stats.items.filter((_, n) => n !== index) })} />}>

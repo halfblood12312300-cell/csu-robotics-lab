@@ -34,7 +34,7 @@ function group(path: (string | number)[]): { tab: SettingsEditorTab; label: stri
     const modules: Record<string, { tab: SettingsEditorTab; label: string }> = {
       modules: { tab: "home", label: "首页与布局 › 模块顺序" }, hero: { tab: "home", label: "首页与布局 › 首屏" },
       stats: { tab: "home", label: "首页与布局 › 数据与说明" }, banner: { tab: "home", label: "首页与布局 › 底部横幅" },
-      research: { tab: "research", label: "研究方向" }, platforms: { tab: "platforms", label: "实验平台" },
+      research: { tab: "research", label: "研究方向" }, platforms: { tab: "platforms", label: "原设备配置" }, projects: { tab: "platforms", label: "拟开展项目" },
       stories: { tab: "showcase", label: "文章与影像 › 近期动态" }, gallery: { tab: "showcase", label: "文章与影像 › 实验室影像" },
     };
     return { ...(modules[String(path[1])] || { tab: "home", label: "首页与布局" }), skip: 2 };

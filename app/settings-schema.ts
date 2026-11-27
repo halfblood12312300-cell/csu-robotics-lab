@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fieldOptions, type Settings } from "./site-config.ts";
+import { defaultSettings, fieldOptions, isTencentQuestionnaireUrl, type Settings } from "./site-config.ts";
 import { linkUrlSchema, mediaUrlSchema } from "./content-urls.ts";
 
 const short = z.string().max(250, "单行文字最多250字");
@@ -39,6 +39,12 @@ function validDate(value: string) {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
+const platformSection = object({
+  heading, columns: columns([1, 2, 3]),
+  items: z.array(object({ id: identifier, enabled: z.boolean(), kind: short, title: short, subtitle: short, count: short, unit: short,
+    description: paragraph, image: mediaUrlSchema, imageAlt: short, link: contentLink })).max(16),
+  note: paragraph, sources: z.array(contentLink).max(16),
+});
 const settingsObject = object({
   revision: z.number().int().nonnegative(), registrationOpen: z.boolean(),
   deadline: z.string().max(16).refine((value) => !value || validDate(value), "截止日期无效"),
@@ -60,15 +66,12 @@ const settingsObject = object({
       eyebrow: short, title: short, highlight: short, note: short, layout: z.enum(["image-right", "image-left", "centered"]),
       imageAlt: short, imageCredit: short, photoLabel: short, photoLabelEn: short, visualLeft: short, visualRight: short,
       primary: contentLink, secondary: contentLink,
+      slides: z.array(object({ id: identifier, enabled: z.boolean(), url: mediaUrlSchema, alt: short, caption: short, credit: short })).max(12).default(defaultSettings.home.hero.slides),
     }),
     stats: object({ items: z.array(object({ id: identifier, enabled: z.boolean(), value: short, unit: short, label: short })).max(12), statement: paragraph }),
     research: object({ heading, columns: columns([2, 3, 4]), directions: z.array(researchDirection).max(16) }),
-    platforms: object({
-      heading, columns: columns([1, 2, 3]),
-      items: z.array(object({ id: identifier, enabled: z.boolean(), kind: short, title: short, subtitle: short, count: short, unit: short,
-        description: paragraph, image: mediaUrlSchema, imageAlt: short, link: contentLink })).max(16),
-      note: paragraph, sources: z.array(contentLink).max(16),
-    }),
+    platforms: platformSection,
+    projects: platformSection.default(defaultSettings.home.projects),
     stories: object({ heading, moreLink: contentLink, limit: z.number().int().min(1).max(24), columns: columns([1, 2, 3, 4]), excludeRecruitment: z.boolean(), featuredIds: z.array(articleId).max(40) }),
     gallery: object({
       heading, source: z.enum(["articles", "manual"]), limit: z.number().int().min(1).max(32), columns: columns([1, 2, 3, 4]),
@@ -81,6 +84,9 @@ const settingsObject = object({
   articles: object({ eyebrow: short, title: short, description: paragraph, emptyText: short, undatedLabel: short,
     coverLeft: short, coverRight: short, coverCaption: short, categories: z.array(z.string().trim().min(1).max(40)).min(1).max(20) }),
   registration: object({
+    mode: z.enum(["internal", "external"]).default("internal"),
+    externalUrl: z.string().max(2000).refine(value => !value || isTencentQuestionnaireUrl(value), "请输入腾讯问卷 HTTPS 填写链接").default(""),
+    externalButton: short.default(defaultSettings.registration.externalButton), externalNote: paragraph.default(defaultSettings.registration.externalNote),
     version: z.number().int().min(1), eyebrow: short, title: short, intro: paragraph, infoTitle: short, infoBody: paragraph,
     directionsTitle: short, directionsNote: paragraph, formEyebrow: short, formTitle: short, formDescription: paragraph, closedMessage: paragraph,
     submitLabel: short, closedButtonLabel: short, consentText: z.string().trim().min(1, "请填写报名信息使用说明").max(2000), privacyNote: paragraph,
@@ -101,6 +107,8 @@ export const settingsSchema = settingsObject.superRefine((value, context) => {
   unique(value.site.navLinks, ["site", "navLinks"]); unique(value.footer.links, ["footer", "links"]);
   unique(value.home.modules, ["home", "modules"]); unique(value.home.stats.items, ["home", "stats", "items"]);
   unique(value.home.research.directions, ["home", "research", "directions"]); unique(value.home.platforms.items, ["home", "platforms", "items"]);
+  unique(value.home.projects.items, ["home", "projects", "items"]); unique(value.home.hero.slides, ["home", "hero", "slides"]);
+  if (value.registration.mode === "external" && value.registrationOpen && !isTencentQuestionnaireUrl(value.registration.externalUrl)) fail(["registration", "externalUrl"], "开放腾讯问卷报名之前，请填写有效的问卷链接");
   unique(value.home.gallery.items, ["home", "gallery", "items"]); unique(value.registration.fields, ["registration", "fields"]);
   if (new Set(value.articles.categories).size !== value.articles.categories.length) fail(["articles", "categories"], "文章分类不能重复");
   for (const id of ["name", "contact"]) {

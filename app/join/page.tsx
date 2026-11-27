@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { CheckCircle2, Send, ShieldCheck } from "lucide-react";
 import { apiJson } from "../api-client";
 import { useRoute } from "../router";
-import { fieldOptions, type FormAnswer, type FormField, type Settings } from "../site-config";
+import { fieldOptions, isTencentQuestionnaireUrl, type FormAnswer, type FormField, type Settings } from "../site-config";
 import { ContentAction, Frame, Eyebrow, usePublic, ErrorNotice, MapPin } from "../ui";
 
 type Answers = Record<string, FormAnswer>;
@@ -96,8 +96,9 @@ export default function Join({ preview = false }: { preview?: boolean }) {
         ? { ...current, directions: field.type === "checkboxes" ? [direction] : direction } : current);
     }
   }, [route.search, form.fields, settings]);
-  const open = configured && online && settings.registrationOpen &&
-    (!settings.deadline || Date.now() <= Date.parse(settings.deadline + "T23:59:59+08:00"));
+  const external = form.mode === "external";
+  const withinDeadline = !settings.deadline || Date.now() <= Date.parse(settings.deadline + "T23:59:59+08:00");
+  const open = settings.registrationOpen && withinDeadline && (external ? isTencentQuestionnaireUrl(form.externalUrl) : configured && online);
   const disabled = busy || loading || !!error || (!preview && !open);
   function change(id: string, value: FormAnswer) {
     setValues((current) => ({ ...current, [id]: value }));
@@ -107,7 +108,7 @@ export default function Join({ preview = false }: { preview?: boolean }) {
     event.preventDefault();
     if (preview) { setMessage("当前为表单预览，不会提交报名。"); return; }
     setMessage("");
-    if (!open) { setMessage(form.closedMessage); return; }
+    if (!open || external) { setMessage(form.closedMessage); return; }
     const answers: Answers = {};
     const fieldErrors: Record<string, string> = {};
     for (const field of form.fields.filter((item) => item.enabled)) {
@@ -157,9 +158,14 @@ export default function Join({ preview = false }: { preview?: boolean }) {
     </aside>
     <div className="form-panel">
       <div className="form-heading"><div>{form.formEyebrow && <small>{form.formEyebrow}</small>}<h2>{form.formTitle}</h2></div>
-        <span className={"status " + (open ? "green" : "")}>{preview ? "表单预览" : loading ? "加载中" : open ? "报名开放" : "暂未开放"}</span>
+        <span className={"status " + (open ? "green" : "")}>{preview ? "表单预览" : open ? "报名开放" : loading ? "加载中" : "暂未开放"}</span>
       </div>
-      <ErrorNotice error={error} />
+      {external ? <div className="external-registration">
+        <p className="notice cms-lines">{open || preview ? form.externalNote : form.closedMessage}</p>
+        {open && !preview ? <a className="button submit" href={form.externalUrl} target="_blank" rel="noopener noreferrer">{form.externalButton || "前往腾讯问卷报名"} <Send size={17} /></a> : <button className="button submit" disabled>{preview ? form.externalButton : form.closedButtonLabel}</button>}
+        {settings.deadline && <p className="deadline-note">报名截止：{settings.deadline} 23:59（北京时间）</p>}
+        <p className="privacy-note"><ShieldCheck size={14} />报名信息由腾讯问卷收集，本站不接收重复报名。</p>
+      </div> : <><ErrorNotice error={error} />
       {success ? <div className="success" role="status"><CheckCircle2 size={52} /><h2>{form.successTitle}</h2>
         <p className="cms-lines">{form.successMessage}</p><small>报名编号：{success.slice(0, 8).toUpperCase()}</small>
         <ContentAction link={form.successLink} settings={settings} className="button" />
@@ -184,7 +190,7 @@ export default function Join({ preview = false }: { preview?: boolean }) {
             {form.privacyNote && <div className="privacy-note"><ShieldCheck size={14} />{form.privacyNote}</div>}
           </fieldset>
         </form>
-      </>}
+      </>}</>}
     </div>
   </section></Frame>;
 }

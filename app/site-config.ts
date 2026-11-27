@@ -14,6 +14,7 @@ export type PlatformItem = {
   count: string; unit: string; description: string; image: string; imageAlt: string;
   link: ContentLink;
 };
+export type HeroSlide = { id: string; enabled: boolean; url: string; alt: string; caption: string; credit: string };
 export type StatItem = { id: string; enabled: boolean; value: string; unit: string; label: string };
 export type GalleryItem = { id: string; enabled: boolean; type: "image" | "video"; url: string; caption: string; href: string };
 export type FieldType = "text" | "textarea" | "email" | "tel" | "url" | "number" | "date" | "select" | "radio" | "checkboxes" | "checkbox";
@@ -26,6 +27,7 @@ export type FormField = {
 export type FormAnswer = string | string[] | boolean;
 export type RegistrationConfig = {
   version: number; eyebrow: string; title: string; intro: string;
+  mode: "internal" | "external"; externalUrl: string; externalButton: string; externalNote: string;
   infoTitle: string; infoBody: string; directionsTitle: string; directionsNote: string;
   formEyebrow: string; formTitle: string; formDescription: string; closedMessage: string;
   submitLabel: string; closedButtonLabel: string; consentText: string; privacyNote: string;
@@ -53,11 +55,12 @@ export type Settings = {
       eyebrow: string; title: string; highlight: string; note: string;
       layout: "image-right" | "image-left" | "centered";
       imageAlt: string; imageCredit: string; photoLabel: string; photoLabelEn: string;
-      visualLeft: string; visualRight: string; primary: ContentLink; secondary: ContentLink;
+      visualLeft: string; visualRight: string; primary: ContentLink; secondary: ContentLink; slides: HeroSlide[];
     };
     stats: { items: StatItem[]; statement: string };
     research: { heading: SectionHeading; columns: 2 | 3 | 4; directions: ResearchDirection[] };
     platforms: { heading: SectionHeading; columns: 1 | 2 | 3; items: PlatformItem[]; note: string; sources: ContentLink[] };
+    projects: { heading: SectionHeading; columns: 1 | 2 | 3; items: PlatformItem[]; note: string; sources: ContentLink[] };
     stories: { heading: SectionHeading; moreLink: ContentLink; limit: number; columns: 1 | 2 | 3 | 4; excludeRecruitment: boolean; featuredIds: string[] };
     gallery: { heading: SectionHeading; source: "articles" | "manual"; limit: number; columns: 1 | 2 | 3 | 4; items: GalleryItem[] };
     banner: { eyebrow: string; title: string; description: string; button: ContentLink; symbol: string; symbolCaption: string };
@@ -76,7 +79,7 @@ export type Settings = {
 };
 
 export const homeModuleLabels: Record<HomeModuleId, string> = {
-  hero: "首屏介绍", stats: "数据概览", research: "研究方向", platforms: "实验平台",
+  hero: "首屏介绍", stats: "数据概览", research: "研究方向", platforms: "拟开展项目",
   stories: "项目与动态", gallery: "图片与视频", banner: "底部展示横幅",
 };
 export const fieldTypeLabels: Record<FieldType, string> = {
@@ -121,7 +124,7 @@ export const defaultSettings: Settings = {
     navLinks: [
       { id: "about", label: "关于实验室", href: "/#about", enabled: true },
       { id: "research", label: "研究方向", href: "/#research", enabled: true },
-      { id: "platforms", label: "实验平台", href: "/#platforms", enabled: true },
+      { id: "platforms", label: "拟开展项目", href: "/#platforms", enabled: true },
       { id: "articles", label: "项目与动态", href: "/articles", enabled: true },
     ],
   },
@@ -132,7 +135,8 @@ export const defaultSettings: Settings = {
       eyebrow: "CSU ROBOTICS LAB", title: "让机器人\n理解任务，", highlight: "自主行动。", note: "欢迎对机器人感兴趣的同学", layout: "image-right",
       imageAlt: "机器人设备展示", imageCredit: "当前设备展示图来自宇树官网，非实验室实拍",
       photoLabel: "从算法，走向真实世界。", photoLabelEn: "ALGORITHMS MEET THE REAL WORLD", visualLeft: "ROBOTICS × MATHEMATICS", visualRight: "探索 · 实践 · 协作",
-      primary: { label: "探索研究方向", href: "/#research", enabled: true }, secondary: { label: "了解实验平台", href: "/#platforms", enabled: true },
+      primary: { label: "探索研究方向", href: "/#research", enabled: true }, secondary: { label: "了解拟开展项目", href: "/#platforms", enabled: true },
+      slides: [{ id: "hero-h2", enabled: true, url: "/media/h2-scene.jpg", alt: "H2人形机器人官方展示", caption: "探索机器人的更多可能。", credit: "宇树官网展示图，非实验室实拍" }],
     },
     stats: { items: [
       { id: "robots", enabled: true, value: "06", unit: "台", label: "真实机器人平台" },
@@ -152,6 +156,14 @@ export const defaultSettings: Settings = {
       note: "设备展示图来源如下；具体研究以实际设备配置及开放接口为基础。",
       sources: [ { label: "宇树A2-W", href: "https://www.unitree.com/cn/mobile/A2-W/", enabled: true }, { label: "宇树H2", href: "https://www.unitree.com/cn/mobile/H2/", enabled: true } ],
     },
+    projects: {
+      heading: { number: "02", eyebrow: "PLANNED PROJECTS", title: "从想法出发，\n走向真实应用。", description: "围绕实际场景，开展机器人自主任务探索。\n以下为拟开展项目，具体方案将在后续实验中完善。" }, columns: 2,
+      items: [
+        { id: "museum-guide", enabled: true, kind: "拟开展项目 · 01", title: "机器人院史馆导览", subtitle: "", count: "", unit: "", description: "探索机器人在院史馆中的自主导航、语音讲解与参观互动，尝试将环境感知与任务执行结合。", image: "", imageAlt: "", link: { label: "了解更多", href: "", enabled: false } },
+        { id: "robot-delivery", enabled: true, kind: "拟开展项目 · 02", title: "机器狗拿外卖", subtitle: "", count: "", unit: "", description: "围绕校园取餐场景，探索机器狗自主导航、目标识别与任务协作，逐步开展功能验证。", image: "", imageAlt: "", link: { label: "了解更多", href: "", enabled: false } },
+      ],
+      note: "项目处于规划阶段，具体研究内容与实施方式将根据实际条件调整。", sources: [],
+    },
     stories: {
       heading: { number: "03", eyebrow: "IDEAS & UPDATES", title: "记录想法，也记录过程。", description: "" },
       moreLink: { label: "全部文章", href: "/articles", enabled: true }, limit: 3, columns: 3, excludeRecruitment: true, featuredIds: [],
@@ -162,7 +174,7 @@ export const defaultSettings: Settings = {
   footer: {
     title: "中南大学数学与统计学院\n机器人实验室", tagline: "理解任务 · 感知环境 · 自主行动", contactTitle: "联系我们", exploreTitle: "探索更多",
     aboutLink: { label: "了解实验室", href: "/#about", enabled: true },
-    links: [ { id: "articles", label: "项目与动态", href: "/articles", enabled: true }, { id: "platforms", label: "实验平台", href: "/#platforms", enabled: true } ],
+    links: [ { id: "articles", label: "项目与动态", href: "/articles", enabled: true }, { id: "platforms", label: "拟开展项目", href: "/#platforms", enabled: true } ],
     adminLabel: "管理入口", bottomLeft: "CSU · MATHEMATICS & STATISTICS · ROBOTICS LAB", bottomRight: "让好奇心，在真实世界中得到验证。",
   },
   articles: {
@@ -171,6 +183,7 @@ export const defaultSettings: Settings = {
     categories: ["招新通知", "研究导读", "平台介绍", "实验记录", "实验室动态"],
   },
   registration: {
+    mode: "internal", externalUrl: "", externalButton: "前往腾讯问卷报名", externalNote: "请在腾讯问卷中填写并提交报名信息，无需在本站重复填写。",
     version: 1, eyebrow: "JOIN THE LAB", title: "下一次探索，\n期待有你。", intro: "带着兴趣来，围绕一个具体问题，\n学习、尝试、协作，把想法付诸实践。",
     infoTitle: "我们欢迎这样的你", infoBody: "对机器人与人工智能有兴趣，愿意持续投入时间，主动学习并与同伴协作。\n\n数学、统计、编程或机器学习基础都能派上用场，暂无机器人项目经验也欢迎报名。",
     directionsTitle: "可以参与的方向", directionsNote: "相关实践也可为2027年大创项目积累基础。",
@@ -191,7 +204,23 @@ function mergeKnown(base: unknown, incoming: unknown): any {
   return typeof incoming === typeof base && incoming !== null ? incoming : base;
 }
 export function normalizeSettings(value?: unknown): Settings {
-  return mergeKnown(defaultSettings, value) as Settings;
+  const result = mergeKnown(defaultSettings, value) as Settings;
+  // Keep existing customized navigation labels. Only migrate the exact former defaults.
+  const source = value as Partial<Settings> | undefined;
+  if (!source?.home?.projects) {
+    for (const link of [...result.site.navLinks, ...result.footer.links]) {
+      if (link.href === "/#platforms" && link.label === "实验平台") link.label = "拟开展项目";
+    }
+    if (result.home.hero.secondary.href === "/#platforms" && result.home.hero.secondary.label === "了解实验平台") result.home.hero.secondary.label = "了解拟开展项目";
+  }
+  return result;
+}
+/** Accept only Tencent's public HTTPS questionnaire URLs. */
+export function isTencentQuestionnaireUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "wj.qq.com" && !url.username && !url.password && !url.port && url.pathname.length > 1;
+  } catch { return false; }
 }
 /** Used for authorized settings patches after schema validation. Never reset omitted nested fields. */
 export function mergeSettings(current: Settings, patch: unknown): Settings {

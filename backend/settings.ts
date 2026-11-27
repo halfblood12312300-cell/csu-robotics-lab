@@ -14,6 +14,12 @@ function normalizeSettingsMedia(body: unknown, origin: string): unknown {
   const value = structuredClone(body) as any;
   for (const key of ["heroImage", "heroVideo"]) if (key in value) value[key] = canonicalMediaUrl(value[key], origin);
   if (value.site && typeof value.site === "object" && "logo" in value.site) value.site.logo = canonicalMediaUrl(value.site.logo, origin);
+  if (Array.isArray(value.home?.hero?.slides)) for (const slide of value.home.hero.slides) {
+    if (slide && typeof slide === "object" && "url" in slide) slide.url = canonicalMediaUrl(slide.url, origin);
+  }
+  if (Array.isArray(value.home?.projects?.items)) for (const item of value.home.projects.items) {
+    if (item && typeof item === "object" && "image" in item) item.image = canonicalMediaUrl(item.image, origin);
+  }
   if (Array.isArray(value.home?.platforms?.items)) for (const item of value.home.platforms.items) {
     if (item && typeof item === "object" && "image" in item) item.image = canonicalMediaUrl(item.image, origin);
   }
@@ -50,7 +56,8 @@ export async function saveSettings(env: Env, body: unknown, origin: string): Pro
 export function settingsReferenceMedia(settings: Settings, url: string): boolean {
   if (settings.site.logo === url) return true;
   const enabled = new Set(settings.home.modules.filter((module) => module.enabled).map((module) => module.id));
-  if (enabled.has("hero") && (settings.heroImage === url || settings.heroVideo === url)) return true;
+  if (enabled.has("hero") && (settings.heroImage === url || settings.heroVideo === url || settings.home.hero.slides.some(slide => slide.enabled && slide.url === url))) return true;
+  if (enabled.has("platforms") && settings.home.projects.items.some(item => item.enabled && item.image === url)) return true;
   if (enabled.has("platforms") && settings.home.platforms.items.some((item) => item.enabled && item.image === url)) return true;
   return enabled.has("gallery") && settings.home.gallery.source === "manual" && settings.home.gallery.items.some((item) => item.enabled && item.url === url);
 }

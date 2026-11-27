@@ -24,7 +24,7 @@ const tabs = [
   { id: "site", label: "站点与导航", icon: Globe2 },
   { id: "home", label: "首页与布局", icon: LayoutTemplate },
   { id: "research", label: "研究方向", icon: Network },
-  { id: "platforms", label: "实验平台", icon: Bot },
+  { id: "platforms", label: "拟开展项目", icon: Bot },
   { id: "showcase", label: "文章与影像", icon: Images },
   { id: "registration", label: "报名页面", icon: ClipboardList },
   { id: "fields", label: "报名表字段", icon: ListChecks },
