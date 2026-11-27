@@ -52,7 +52,7 @@ export function SiteStateProvider({ children }: { children: ReactNode }) {
         const attemptController = new AbortController();
         const cancel = () => attemptController.abort();
         controller.signal.addEventListener("abort", cancel, { once: true });
-        const timeout = setTimeout(cancel, 8000);
+        const timeout = setTimeout(cancel, 15000);
         try {
           const value = await apiJson<PublicResponse>("/api/data", undefined, { signal: attemptController.signal });
           const next = publicContent(value);
@@ -93,11 +93,15 @@ export function SiteStateProvider({ children }: { children: ReactNode }) {
     const resume = () => {
       if (document.visibilityState === "visible" && !activeRead.current) void refresh();
     };
+    // Storage events only notify tabs on this device. Other devices need
+    // their own refresh, including when the visitor leaves the page open.
+    const interval = window.setInterval(resume, 60000);
     window.addEventListener("focus", resume);
     window.addEventListener("online", resume);
     document.addEventListener("visibilitychange", resume);
     return () => {
       unsubscribe();
+      window.clearInterval(interval);
       window.removeEventListener("focus", resume);
       window.removeEventListener("online", resume);
       document.removeEventListener("visibilitychange", resume);

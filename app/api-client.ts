@@ -5,7 +5,8 @@ const AUTH_EVENT = "csu-lab-auth-change";
 const CONTENT_EVENT = "csu-lab-content-change";
 const CONTENT_STORAGE_KEY = "csu-lab-content-change-v1";
 type StoredSession = { token: string; expiresAt: number };
-let apiBase = normalizeBase(import.meta.env.VITE_API_BASE_URL || "");
+declare const __CSU_RUNTIME_API_FALLBACK__: string | null;
+let apiBase = normalizeBase(__CSU_RUNTIME_API_FALLBACK__ ?? import.meta.env.VITE_API_BASE_URL ?? "");
 let memorySession: StoredSession | null = null;
 let authGeneration = 0;
 const previews = new Map<string, { url: string; expiresAt: number }>();
@@ -38,7 +39,7 @@ export async function initializeApiConfig() {
       const value = await response.json();
       if (value && typeof value === "object" && "apiBaseUrl" in value && typeof value.apiBaseUrl === "string") apiBase = normalizeBase(value.apiBaseUrl);
     }
-  } catch { /* The runtime override is optional. */ }
+  } catch { /* Keep the embedded public API address if the optional runtime override cannot be loaded. */ }
   finally { clearTimeout(timeout); }
 }
 
