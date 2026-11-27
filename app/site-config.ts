@@ -157,10 +157,11 @@ export const defaultSettings: Settings = {
       sources: [ { label: "宇树A2-W", href: "https://www.unitree.com/cn/mobile/A2-W/", enabled: true }, { label: "宇树H2", href: "https://www.unitree.com/cn/mobile/H2/", enabled: true } ],
     },
     projects: {
-      heading: { number: "02", eyebrow: "PLANNED PROJECTS", title: "从想法出发，\n走向真实应用。", description: "围绕实际场景，开展机器人自主任务探索。\n以下为拟开展项目，具体方案将在后续实验中完善。" }, columns: 2,
+      heading: { number: "02", eyebrow: "PLANNED PROJECTS", title: "从想法出发，\n走向真实应用。", description: "围绕实际场景，开展机器人自主任务探索。\n以下为拟开展项目，具体方案将在后续实验中完善。" }, columns: 3,
       items: [
         { id: "museum-guide", enabled: true, kind: "拟开展项目 · 01", title: "机器人院史馆导览", subtitle: "", count: "", unit: "", description: "探索机器人在院史馆中的自主导航、语音讲解与参观互动，尝试将环境感知与任务执行结合。", image: "", imageAlt: "", link: { label: "了解更多", href: "", enabled: false } },
         { id: "robot-delivery", enabled: true, kind: "拟开展项目 · 02", title: "机器狗拿外卖", subtitle: "", count: "", unit: "", description: "围绕校园取餐场景，探索机器狗自主导航、目标识别与任务协作，逐步开展功能验证。", image: "", imageAlt: "", link: { label: "了解更多", href: "", enabled: false } },
+        {"id":"robot-performance","enabled":true,"kind":"拟开展项目 · 03","title":"机器人表演","subtitle":"","count":"","unit":"","description":"探索机器人的动作编排、音乐节奏配合与互动展示，逐步开展适合校园活动的表演实践。","image":"","imageAlt":"","link":{"label":"了解更多","href":"","enabled":false}},
       ],
       note: "项目处于规划阶段，具体研究内容与实施方式将根据实际条件调整。", sources: [],
     },
@@ -183,7 +184,7 @@ export const defaultSettings: Settings = {
     categories: ["招新通知", "研究导读", "平台介绍", "实验记录", "实验室动态"],
   },
   registration: {
-    mode: "internal", externalUrl: "", externalButton: "前往腾讯问卷报名", externalNote: "请在腾讯问卷中填写并提交报名信息，无需在本站重复填写。",
+    mode: "internal", externalUrl: "", externalButton: "前往问卷星报名", externalNote: "请在问卷星中填写并提交报名信息，无需在本站重复填写。",
     version: 1, eyebrow: "JOIN THE LAB", title: "下一次探索，\n期待有你。", intro: "带着兴趣来，围绕一个具体问题，\n学习、尝试、协作，把想法付诸实践。",
     infoTitle: "我们欢迎这样的你", infoBody: "对机器人与人工智能有兴趣，愿意持续投入时间，主动学习并与同伴协作。\n\n数学、统计、编程或机器学习基础都能派上用场，暂无机器人项目经验也欢迎报名。",
     directionsTitle: "可以参与的方向", directionsNote: "相关实践也可为2027年大创项目积累基础。",
@@ -215,11 +216,16 @@ export function normalizeSettings(value?: unknown): Settings {
   }
   return result;
 }
-/** Accept only Tencent's public HTTPS questionnaire URLs. */
-export function isTencentQuestionnaireUrl(value: string): boolean {
+/** Allow only known questionnaire providers and their public HTTPS form paths. */
+export function isExternalQuestionnaireUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname === "wj.qq.com" && !url.username && !url.password && !url.port && url.pathname.length > 1;
+    if (url.protocol !== "https:" || url.username || url.password || url.port) return false;
+    if (["wjx.top", "www.wjx.top", "wjx.cn", "www.wjx.cn", "v.wjx.cn"].includes(url.hostname)) {
+      return /^\/(?:vm|vj|jq)\/[A-Za-z0-9_-]+\.aspx$/i.test(url.pathname);
+    }
+    if (url.hostname === "wj.qq.com") return /^\/s2\/[A-Za-z0-9_-]+\/?$/.test(url.pathname);
+    return false;
   } catch { return false; }
 }
 /** Used for authorized settings patches after schema validation. Never reset omitted nested fields. */

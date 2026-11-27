@@ -132,7 +132,7 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
   }
   if (key === "apply") {
     const settings = await getSettings(env);
-    if (settings.registration.mode === "external") return json({ error: "请通过网站公布的腾讯问卷链接报名。" }, 403);
+    if (settings.registration.mode === "external") return json({ error: "请通过网站公布的外部问卷链接报名。" }, 403);
     if (!settings.registrationOpen || (settings.deadline && Date.now() > Date.parse(settings.deadline + "T23:59:59+08:00"))) {
       return json({ error: "报名暂未开放或已截止，请关注后续通知" }, 403);
     }

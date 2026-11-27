@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defaultSettings, fieldOptions, isTencentQuestionnaireUrl, type Settings } from "./site-config.ts";
+import { defaultSettings, fieldOptions, isExternalQuestionnaireUrl, type Settings } from "./site-config.ts";
 import { linkUrlSchema, mediaUrlSchema } from "./content-urls.ts";
 
 const short = z.string().max(250, "单行文字最多250字");
@@ -85,7 +85,7 @@ const settingsObject = object({
     coverLeft: short, coverRight: short, coverCaption: short, categories: z.array(z.string().trim().min(1).max(40)).min(1).max(20) }),
   registration: object({
     mode: z.enum(["internal", "external"]).default("internal"),
-    externalUrl: z.string().max(2000).refine(value => !value || isTencentQuestionnaireUrl(value), "请输入腾讯问卷 HTTPS 填写链接").default(""),
+    externalUrl: z.string().max(2000).refine(value => !value || isExternalQuestionnaireUrl(value), "请输入问卷星或腾讯问卷的 HTTPS 公开填写链接").default(""),
     externalButton: short.default(defaultSettings.registration.externalButton), externalNote: paragraph.default(defaultSettings.registration.externalNote),
     version: z.number().int().min(1), eyebrow: short, title: short, intro: paragraph, infoTitle: short, infoBody: paragraph,
     directionsTitle: short, directionsNote: paragraph, formEyebrow: short, formTitle: short, formDescription: paragraph, closedMessage: paragraph,
@@ -108,7 +108,7 @@ export const settingsSchema = settingsObject.superRefine((value, context) => {
   unique(value.home.modules, ["home", "modules"]); unique(value.home.stats.items, ["home", "stats", "items"]);
   unique(value.home.research.directions, ["home", "research", "directions"]); unique(value.home.platforms.items, ["home", "platforms", "items"]);
   unique(value.home.projects.items, ["home", "projects", "items"]); unique(value.home.hero.slides, ["home", "hero", "slides"]);
-  if (value.registration.mode === "external" && value.registrationOpen && !isTencentQuestionnaireUrl(value.registration.externalUrl)) fail(["registration", "externalUrl"], "开放腾讯问卷报名之前，请填写有效的问卷链接");
+  if (value.registration.mode === "external" && value.registrationOpen && !isExternalQuestionnaireUrl(value.registration.externalUrl)) fail(["registration", "externalUrl"], "开放外部报名之前，请填写有效的问卷链接");
   unique(value.home.gallery.items, ["home", "gallery", "items"]); unique(value.registration.fields, ["registration", "fields"]);
   if (new Set(value.articles.categories).size !== value.articles.categories.length) fail(["articles", "categories"], "文章分类不能重复");
   for (const id of ["name", "contact"]) {

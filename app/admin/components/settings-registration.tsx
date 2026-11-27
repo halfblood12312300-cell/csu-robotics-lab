@@ -8,12 +8,12 @@ export function RegistrationPageEditor({ value: s, onChange: setS }: SettingsEdi
   const r = s.registration;
   const update = (registration: typeof r) => setS((prev) => ({ ...prev, registration }));
   return <>
-    <SettingPanel title="报名通道 · 腾讯问卷" description="腾讯问卷的题目、开放时间和报名名单在腾讯问卷管理；本站只展示公开填写入口。">
-      <SelectField label="报名方式" value={r.mode} onChange={mode => update({ ...r, mode })} options={[{ value: "internal", label: "本站原生报名（需要后端连接）" }, { value: "external", label: "腾讯问卷（国内访问）" }]} />
-      <TextField label="腾讯问卷公开填写链接" value={r.externalUrl} type="url" maxLength={2000} placeholder="https://wj.qq.com/s2/..." onChange={externalUrl => update({ ...r, externalUrl })} />
+    <SettingPanel title="报名通道 · 外部问卷" description="问卷题目、开放时间和报名名单在对应平台管理；本站只展示公开填写入口，支持问卷星和腾讯问卷。">
+      <SelectField label="报名方式" value={r.mode} onChange={mode => update({ ...r, mode })} options={[{ value: "internal", label: "本站原生报名（需要后端连接）" }, { value: "external", label: "外部问卷（问卷星 / 腾讯问卷）" }]} />
+      <TextField label="外部问卷公开填写链接" value={r.externalUrl} type="url" maxLength={2000} placeholder="https://www.wjx.top/vm/..." onChange={externalUrl => update({ ...r, externalUrl })} />
       <TextField label="问卷按钮文字" value={r.externalButton} maxLength={250} onChange={externalButton => update({ ...r, externalButton })} />
       <TextField label="问卷填写提示" value={r.externalNote} multiline maxLength={4000} onChange={externalNote => update({ ...r, externalNote })} />
-      <p className="editor-note">保存后，无法访问实时接口的访客将在 GitHub Pages 下次同步后看到更新。关闭报名时也需要到腾讯问卷停止收集，已分享的外部链接不受本站开关控制。</p>
+      <p className="editor-note">保存后，无法访问实时接口的访客将在 GitHub Pages 下次同步后看到更新。关闭报名时也需要到问卷平台停止收集，已分享的外部链接不受本站开关控制。</p>
     </SettingPanel>
     <SettingPanel title="报名开放与联系信息" description="保存后会立即影响新报名。关闭报名会保留介绍和已收到的报名记录。">
       <ToggleField label="开放在线报名" value={s.registrationOpen} onChange={(registrationOpen) => setS((prev) => ({ ...prev, registrationOpen }))} help={s.registrationOpen ? "保存后接收新报名。" : "保存后停止接收新报名。"} />
