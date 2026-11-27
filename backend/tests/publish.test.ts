@@ -16,6 +16,14 @@ test("publication dispatch uses fixed repository and secret, failure does not th
     return new Response(null, { status: 204 });
   }) as typeof fetch;
   assert.equal(await requestPublication(env, mock), "queued");
-  assert.equal(await requestPublication(env, (async () => new Response(null, {status:403})) as typeof fetch), "failed");
+  assert.equal(await requestPublication(env, (async () => new Response(null, {status:403})) as typeof fetch), "forbidden");
   assert.equal(await requestPublication(env, (async () => {throw Error("offline");}) as typeof fetch), "failed");
+});
+
+test("diagnostics classify status without exposing private upstream body", async () => {
+  const env = { GITHUB_PUBLISH_TOKEN: "test-only" } as Env;
+  for (const [status, expected] of [[401,"invalid_token"],[404,"not_found"],[422,"invalid_request"],[429,"rate_limited"],[503,"github_http_503"]] as const) {
+    assert.equal(await requestPublication(env, (async () => new Response("private detail", {status})) as typeof fetch), expected);
+  }
+  assert.equal(await requestPublication(env, (async () => {throw new DOMException("private detail","TimeoutError");}) as typeof fetch), "timeout");
 });
