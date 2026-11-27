@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { requestPublication } from "./publish.ts";
 import { initialArticles } from "../app/content.ts";
 import { ApiError, type Env } from "./types.ts";
 import { json, readJson } from "./http.ts";
@@ -152,11 +151,11 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
     return json({ id, message: settings.registration.successMessage }, 201);
   }
   if (key === "admin/publish") {
-    return json({ ok: true, publication: await requestPublication(env) });
+    return json({ ok: true, publication: "manual" });
   }
   if (key === "admin/settings") {
     const settings = await saveSettings(env, body, url.origin);
-    return json({ ok: true, settings, publication: await requestPublication(env) });
+    return json({ ok: true, settings, publication: "manual" });
   }
   if (key === "admin/article") {
     const a = articleSchema.parse(normalizeContent(body, url.origin));
@@ -165,7 +164,7 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
     await env.DB.prepare(
       "INSERT INTO articles (id,title,category,summary,body,cover,media,status,date,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,category=excluded.category,summary=excluded.summary,body=excluded.body,cover=excluded.cover,media=excluded.media,status=excluded.status,date=excluded.date,updated_at=excluded.updated_at",
     ).bind(a.id, a.title, a.category, a.summary, a.body, a.cover, JSON.stringify(a.media), a.status, a.date, new Date().toISOString()).run();
-    return json({ ok: true, publication: publicChanged ? await requestPublication(env) : "not_needed" });
+    return json({ ok: true, publication: publicChanged ? "manual" : "not_needed" });
   }
   if (key === "admin/application") {
     const a = z.object({ id: z.string().uuid(), status: z.enum(["待查看", "已联系", "待交流", "已录取", "暂不合适"]), note: z.string().max(2000) }).parse(body);

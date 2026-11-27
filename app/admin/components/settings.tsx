@@ -8,7 +8,7 @@ import { SettingsPreviewProvider } from "../../site-state";
 import Home from "../../page";
 import Join from "../../join/page";
 import { api, downloadJson, Modal } from "../shared";
-import { publicationMessage, publicationRuns } from "../publication";
+import { publicationMessage, publicationRuns, publicationWorkflow } from "../publication";
 import { AssetPicker } from "./media-library";
 import { SettingPanel } from "./settings-controls";
 import { SiteSettingsEditor } from "./settings-site";
@@ -96,12 +96,6 @@ export function Settings({ value, articles, assets, onUpload, onRefresh, notify,
     } finally { setBusy(false); }
   }
 
-  async function publishNow() {
-    setBusy(true); setError("");
-    try { const result = await api("admin/publish", {}); setSuccess(publicationMessage(result.publication)); }
-    catch (failure) { setError((failure as Error).message); }
-    finally { setBusy(false); }
-  }
   function exportDraft() {
     downloadJson({ format: "csu-robotics-settings-draft-v1", exportedAt: new Date().toISOString(), settings: s }, "实验室网站设置草稿.json");
   }
@@ -120,7 +114,7 @@ export function Settings({ value, articles, assets, onUpload, onRefresh, notify,
   const editorProps = { value: s, onChange: setS, pick };
 
   return <div className="site-settings">
-    <div className="cms-heading"><div><h1>网站设置</h1><p>维护首页、研究展示与报名表。先预览，再保存发布。</p></div><span className={"settings-state " + (dirty ? "dirty" : "")} role="status">{dirty ? <Circle size={13} /> : <CheckCircle2 size={15} />}{dirty ? "有修改尚未保存" : "已与数据库同步"}</span></div>
+    <div className="cms-heading"><div><h1>网站设置</h1><p>维护首页、研究展示与报名表。先预览，再保存；通过 GitHub 发布公开网站。</p></div><span className={"settings-state " + (dirty ? "dirty" : "")} role="status">{dirty ? <Circle size={13} /> : <CheckCircle2 size={15} />}{dirty ? "有修改尚未保存" : "已与数据库同步"}</span></div>
     {!editingAvailable && <div className="settings-feedback error" role="alert">后台配置服务正在更新，请稍后刷新。你可以浏览设置，保存功能会在服务就绪后开放。 <button type="button" className="button small outline" onClick={() => onRefresh().catch((failure) => setError((failure as Error).message))}><RefreshCw size={14} />重新检查</button></div>}
     <div ref={feedback} aria-live="polite">{error && <div className="settings-feedback error" role="alert">{error}{conflict && <div className="cms-actions"><button type="button" className="button small outline" onClick={exportDraft}><Download size={14} />导出当前草稿</button><button type="button" className="button small outline" onClick={() => void reloadSaved()} disabled={busy}><RefreshCw size={14} />载入最新设置</button></div>}</div>}{success && <div className="settings-feedback" role="status">{success}</div>}</div>
     <div className="settings-tab-bar" role="tablist" aria-label="网站设置分类">{tabs.map(({ id, label, icon: Icon }) => <button key={id} type="button" role="tab" className="settings-tab" aria-selected={tab === id} aria-controls={`settings-panel-${id}`} id={`settings-tab-${id}`} onClick={() => setTab(id)}><Icon size={15} />{label}</button>)}</div>
@@ -138,7 +132,7 @@ export function Settings({ value, articles, assets, onUpload, onRefresh, notify,
           <p className="muted backup-note">内容备份包含素材链接，图片与视频原件请另行保留。报名名单在“报名管理”中单独导出；当前草稿导出包含本页尚未保存的设置。</p>
         </SettingPanel>}
       </div></fieldset>
-      <div className="settings-save-bar"><div className="cms-actions"><button type="submit" className="button" disabled={busy || !dirty || conflict || !editingAvailable}><Save size={17} />{busy ? "保存中…" : "保存并发布设置"}</button><button type="button" className="button outline" disabled={busy} onClick={() => setPreview(tab === "registration" || tab === "fields" ? "registration" : "home")}><Eye size={17} />预览未保存修改</button>{dirty && !conflict && <button type="button" className="text-link" disabled={busy} onClick={() => { if (window.confirm("放弃本页尚未保存的修改，恢复到上次保存的设置吗？")) { setS(structuredClone(saved)); setError(""); } }}>放弃修改</button>}</div><div className="settings-save-hint">保存后需 GitHub 发布才会同步到所有设备。<br /><button type="button" className="text-link" disabled={busy} onClick={() => void publishNow()}>立即同步公开网站</button><br /><a className="text-link" href={publicationRuns} target="_blank" rel="noreferrer">查看发布状态</a><br /><SiteLink href="/" target="_blank" rel="noreferrer" className="text-link">查看已发布首页 <ExternalLink size={13} /></SiteLink></div></div>
+      <div className="settings-save-bar"><div className="cms-actions"><button type="submit" className="button" disabled={busy || !dirty || conflict || !editingAvailable}><Save size={17} />{busy ? "保存中…" : "保存设置"}</button><button type="button" className="button outline" disabled={busy} onClick={() => setPreview(tab === "registration" || tab === "fields" ? "registration" : "home")}><Eye size={17} />预览未保存修改</button>{dirty && !conflict && <button type="button" className="text-link" disabled={busy} onClick={() => { if (window.confirm("放弃本页尚未保存的修改，恢复到上次保存的设置吗？")) { setS(structuredClone(saved)); setError(""); } }}>放弃修改</button>}</div><div className="settings-save-hint">保存后请打开 GitHub，选择 Run workflow → main → Run workflow。<br /><a className="text-link" href={publicationWorkflow} target="_blank" rel="noopener noreferrer">立即同步公开网站 <ExternalLink size={13} /></a><br /><a className="text-link" href={publicationRuns} target="_blank" rel="noreferrer">查看发布状态</a><br /><SiteLink href="/" target="_blank" rel="noreferrer" className="text-link">查看已发布首页 <ExternalLink size={13} /></SiteLink></div></div>
     </form>
     {picker && <AssetPicker kind={picker.kind} assets={assets} onUpload={onUpload} onClose={() => setPicker(null)} onSelect={(asset) => picker.select(asset.url)} />}
     {preview && <Modal title="页面预览 · 当前未保存设置" wide onClose={() => setPreview(null)}>
