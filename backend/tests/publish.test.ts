@@ -17,7 +17,7 @@ test("publication dispatch uses fixed repository and secret, failure does not th
   }) as typeof fetch;
   assert.equal(await requestPublication(env, mock), "queued");
   assert.equal(await requestPublication(env, (async () => new Response(null, {status:403})) as typeof fetch), "forbidden");
-  assert.equal(await requestPublication(env, (async () => {throw Error("offline");}) as typeof fetch), "failed");
+  assert.equal(await requestPublication(env, (async () => {throw Error("offline");}) as typeof fetch), "network_error");
 });
 
 test("diagnostics classify status without exposing private upstream body", async () => {
