@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { apiBaseUrl, apiJson, clearAdminSession, getAdminSession, isApiConfigured, onAuthChange, onContentChange } from "./api-client";
+import { apiBaseUrl, publicAssetUrl, apiJson, clearAdminSession, getAdminSession, isApiConfigured, onAuthChange, onContentChange } from "./api-client";
 import { initialArticles, normalizeSettings, type Article, type Settings } from "./content";
+
+import { createPublicSnapshot, readPublicSnapshot, canUseSnapshot, type PublicSnapshot } from "./public-snapshot.ts";
 
 type PublicState = { settings: Settings; articles: Article[]; loading: boolean; error: string; online: boolean; configured: boolean; formReady: boolean; refresh: () => Promise<void> };
 type SessionState = { authenticated: boolean; isAdmin: boolean; loading: boolean; configured: boolean };
@@ -9,28 +11,29 @@ const SessionContext = createContext<SessionState>({ authenticated: false, isAdm
 
 type PublicContent = { settings: Settings; articles: Article[] };
 type PublicResponse = PublicContent & { capabilities?: { formEditor?: boolean } };
-function cacheKey() { return "csu-lab-public-content-v1:" + apiBaseUrl(); }
-function publicContent(value: PublicResponse): PublicContent {
-  if (!value?.settings || !Array.isArray(value.articles)) throw new Error("内容暂时不可用");
-  return { settings: normalizeSettings(value.settings), articles: value.articles.filter((article) => article.status === "published") };
-}
-function readPublicCache(): PublicContent | null {
+function cacheKey() { return "csu-lab-public-content-v2:" + apiBaseUrl(); }
+function readPublicCache(): PublicSnapshot | null {
   try {
     const raw = localStorage.getItem(cacheKey());
-    return raw ? publicContent(JSON.parse(raw)) : null;
+    return raw ? readPublicSnapshot(JSON.parse(raw)) : null;
   } catch { return null; }
 }
-function storePublicCache(value: PublicContent) {
-  // Only the public /api/data response is cached, never admin data, credentials or applications.
+function storePublicCache(value: PublicSnapshot) {
+  // Only validated public fields are cached, never admin data or applications.
   try { localStorage.setItem(cacheKey(), JSON.stringify(value)); } catch {}
+}
+function snapshotMessage(value: PublicSnapshot | null): string {
+  if (!value) return "暂时无法获取最新内容，当前显示实验室介绍。请重新加载。";
+  const date = new Date(value.capturedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
+  return "实时服务暂不可达，当前显示最近同步的公开内容（北京时间 " + date + "）。在线报名需要连接实时服务。";
 }
 
 export function SiteStateProvider({ children }: { children: ReactNode }) {
   const configured = isApiConfigured();
-  const cached = useRef<PublicContent | null>(null);
+  const cached = useRef<PublicSnapshot | null>(null);
   const [data, setData] = useState<PublicContent>(() => {
     cached.current = configured ? readPublicCache() : null;
-    return cached.current || { settings: normalizeSettings(), articles: configured ? [] : initialArticles };
+    return cached.current ? { settings: cached.current.settings, articles: cached.current.articles } : { settings: normalizeSettings(), articles: configured ? [] : initialArticles };
   });
   const readGeneration = useRef(0);
   const activeRead = useRef<AbortController | null>(null);
@@ -45,42 +48,70 @@ export function SiteStateProvider({ children }: { children: ReactNode }) {
     activeRead.current?.abort();
     const controller = new AbortController();
     activeRead.current = controller;
-    try {
-      // Retry only the public GET, never a mutation. Time out stalled reads.
+    let liveSucceeded = false;
+    const current = () => generation === readGeneration.current && !controller.signal.aborted;
+    const apply = (value: PublicSnapshot) => {
+      cached.current = value;
+      setData({ settings: value.settings, articles: value.articles });
+      storePublicCache(value);
+    };
+    // Same-origin Pages snapshot is loaded concurrently, not after the Worker timeout.
+    const readStatic = async () => {
+      const request = new AbortController();
+      const cancel = () => request.abort();
+      controller.signal.addEventListener("abort", cancel, { once: true });
+      const timeout = setTimeout(cancel, 15000);
+      try {
+        const response = await fetch(publicAssetUrl("public-content.json"), { cache: "no-store", signal: request.signal });
+        if (!response.ok) return;
+        const value = readPublicSnapshot(await response.json());
+        if (current() && !liveSucceeded && canUseSnapshot(value, cached.current)) {
+          apply(value);
+          setOnline(false);
+          setFormReady(false);
+          setError(snapshotMessage(value));
+        }
+      } catch { /* Live data and the previous valid copy remain available. */ }
+      finally { clearTimeout(timeout); controller.signal.removeEventListener("abort", cancel); }
+    };
+    const readLive = async () => {
       for (let attempt = 0; attempt < 2; attempt++) {
-        if (controller.signal.aborted) return;
-        const attemptController = new AbortController();
-        const cancel = () => attemptController.abort();
+        if (!current()) return;
+        const request = new AbortController();
+        const cancel = () => request.abort();
         controller.signal.addEventListener("abort", cancel, { once: true });
         const timeout = setTimeout(cancel, 15000);
         try {
-          const value = await apiJson<PublicResponse>("/api/data", undefined, { signal: attemptController.signal });
-          const next = publicContent(value);
-          if (generation !== readGeneration.current || controller.signal.aborted) return;
-          cached.current = next;
-          setData(next);
-          storePublicCache(next);
+          const capturedAt = Date.now();
+          const value = await apiJson<PublicResponse>("/api/data", undefined, { signal: request.signal });
+          const next = createPublicSnapshot(value, capturedAt);
+          if (!current()) return;
+          if (cached.current && next.settings.revision < cached.current.settings.revision) throw new Error("Older revision");
+          liveSucceeded = true;
+          apply(next);
           setOnline(true);
           setFormReady(value.capabilities?.formEditor === true);
           setError("");
           return;
-        } catch (failure) {
-          if (controller.signal.aborted) return;
-          if (attempt === 1) throw failure;
+        } catch {
+          if (!current()) return;
         } finally {
           clearTimeout(timeout);
           controller.signal.removeEventListener("abort", cancel);
         }
       }
-    } catch {
-      if (generation !== readGeneration.current || controller.signal.aborted) return;
-      // A temporary failure must not replace a successful published revision with built-in content.
-      if (!cached.current) setData({ settings: normalizeSettings({ registrationOpen: false }), articles: initialArticles });
-      setOnline(false);
-      setFormReady(false);
-      setError(cached.current ? "暂时无法获取最新内容，当前显示上一次成功读取的版本。请重新加载。" : "暂时无法获取最新内容，当前显示实验室介绍。请重新加载。");
+    };
+    try {
+      await Promise.all([readStatic(), readLive()]);
+      if (!current()) return;
+      if (!liveSucceeded) {
+        if (!cached.current) setData({ settings: normalizeSettings({ registrationOpen: false }), articles: initialArticles });
+        setOnline(false);
+        setFormReady(false);
+        setError(snapshotMessage(cached.current));
+      }
     } finally {
-      if (generation === readGeneration.current) {
+      if (current()) {
         activeRead.current = null;
         setLoading(false);
       }

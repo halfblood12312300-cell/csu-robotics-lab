@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
 
 permissions:
   contents: read
@@ -40,6 +42,9 @@ jobs:
         env:
           # A public backend origin, never a password, token, or secret.
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      - name: Fetch and validate published content snapshot
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: node --experimental-strip-types scripts/sync-public-content.ts
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v4
