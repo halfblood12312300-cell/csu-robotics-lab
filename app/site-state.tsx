@@ -4,14 +4,14 @@ import { initialArticles, normalizeSettings, type Article, type Settings } from 
 
 import { createPublicSnapshot, readPublicSnapshot, canUseSnapshot, type PublicSnapshot } from "./public-snapshot.ts";
 
-type PublicState = { settings: Settings; articles: Article[]; loading: boolean; error: string; online: boolean; configured: boolean; formReady: boolean; refresh: () => Promise<void> };
+type PublicState = { settings: Settings; articles: Article[]; loading: boolean; error: string; online: boolean; configured: boolean; formReady: boolean; syncedAt?: number; refresh: () => Promise<void> };
 type SessionState = { authenticated: boolean; isAdmin: boolean; loading: boolean; configured: boolean };
 const PublicContext = createContext<PublicState | null>(null);
 const SessionContext = createContext<SessionState>({ authenticated: false, isAdmin: false, loading: false, configured: false });
 
 type PublicContent = { settings: Settings; articles: Article[] };
 type PublicResponse = PublicContent & { capabilities?: { formEditor?: boolean } };
-function cacheKey() { return "csu-lab-public-content-v2:" + apiBaseUrl(); }
+function cacheKey() { return "csu-lab-static-content-v3:" + import.meta.env.BASE_URL; }
 function readPublicCache(): PublicSnapshot | null {
   try {
     const raw = localStorage.getItem(cacheKey());
@@ -22,94 +22,101 @@ function storePublicCache(value: PublicSnapshot) {
   // Only validated public fields are cached, never admin data or applications.
   try { localStorage.setItem(cacheKey(), JSON.stringify(value)); } catch {}
 }
-function snapshotMessage(value: PublicSnapshot | null): string {
-  if (!value) return "暂时无法获取最新内容，当前显示实验室介绍。请重新加载。";
-  const date = new Date(value.capturedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
-  return "实时服务暂不可达，当前显示最近同步的公开内容（北京时间 " + date + "）。在线报名需要连接实时服务。";
+function isNativeJoin() {
+  return window.location.hash.split("?")[0] === "#/join";
 }
 
 export function SiteStateProvider({ children }: { children: ReactNode }) {
   const configured = isApiConfigured();
   const cached = useRef<PublicSnapshot | null>(null);
   const [data, setData] = useState<PublicContent>(() => {
-    cached.current = configured ? readPublicCache() : null;
+    cached.current = readPublicCache();
     return cached.current ? { settings: cached.current.settings, articles: cached.current.articles } : { settings: normalizeSettings(), articles: configured ? [] : initialArticles };
   });
   const readGeneration = useRef(0);
   const activeRead = useRef<AbortController | null>(null);
-  const [loading, setLoading] = useState(configured);
+  const [loading, setLoading] = useState(!cached.current && (configured || import.meta.env.PROD));
+  const [syncedAt, setSyncedAt] = useState<number | undefined>(cached.current?.capturedAt);
   const [error, setError] = useState("");
   const [online, setOnline] = useState(false);
   const [formReady, setFormReady] = useState(false);
   const [session, setSession] = useState<SessionState>({ authenticated: false, isAdmin: false, loading: configured && !!getAdminSession(), configured });
   const refresh = useCallback(async () => {
-    if (!configured) return;
     const generation = ++readGeneration.current;
     activeRead.current?.abort();
     const controller = new AbortController();
     activeRead.current = controller;
-    let liveSucceeded = false;
     const current = () => generation === readGeneration.current && !controller.signal.aborted;
-    const apply = (value: PublicSnapshot) => {
-      cached.current = value;
+    const publishStatic = (value: PublicSnapshot) => {
       setData({ settings: value.settings, articles: value.articles });
-      storePublicCache(value);
+      setSyncedAt(value.capturedAt);
+      setOnline(false);
+      setFormReady(false);
+      setError("");
+      setLoading(false);
     };
-    // Same-origin Pages snapshot is loaded concurrently, not after the Worker timeout.
-    const readStatic = async () => {
+    async function bounded<T>(fn: (signal: AbortSignal) => Promise<T>, ms: number): Promise<T> {
       const request = new AbortController();
       const cancel = () => request.abort();
+      if (controller.signal.aborted) cancel();
       controller.signal.addEventListener("abort", cancel, { once: true });
-      const timeout = setTimeout(cancel, 15000);
-      try {
-        const response = await fetch(publicAssetUrl("public-content.json"), { cache: "no-store", signal: request.signal });
-        if (!response.ok) return;
-        const value = readPublicSnapshot(await response.json());
-        if (current() && !liveSucceeded && canUseSnapshot(value, cached.current)) {
-          apply(value);
-          setOnline(false);
-          setFormReady(false);
-          setError(snapshotMessage(value));
-        }
-      } catch { /* Live data and the previous valid copy remain available. */ }
+      const timeout = setTimeout(cancel, ms);
+      try { return await fn(request.signal); }
       finally { clearTimeout(timeout); controller.signal.removeEventListener("abort", cancel); }
-    };
-    const readLive = async () => {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        if (!current()) return;
-        const request = new AbortController();
-        const cancel = () => request.abort();
-        controller.signal.addEventListener("abort", cancel, { once: true });
-        const timeout = setTimeout(cancel, 15000);
+    }
+    try {
+      // Production visitors use only the same-origin, published Pages snapshot.
+      // A time-bucket query helps bypass stale CDN responses without cache-busting every request.
+      if (import.meta.env.PROD) {
+        try {
+          const value = await bounded(async signal => {
+            const url = publicAssetUrl("public-content.json") + "?v=" + Math.floor(Date.now() / 60000);
+            const response = await fetch(url, { cache: "no-store", signal });
+            if (!response.ok) throw new Error("静态内容暂不可用");
+            return readPublicSnapshot(await response.json());
+          }, 15000);
+          if (!current()) return;
+          if (canUseSnapshot(value, cached.current)) {
+            cached.current = value;
+            storePublicCache(value);
+          }
+        } catch { /* Keep the last valid static snapshot. */ }
+      }
+      if (!current()) return;
+      if (cached.current) publishStatic(cached.current);
+      else if (import.meta.env.PROD) {
+        setData({ settings: normalizeSettings({ registrationOpen: false }), articles: initialArticles });
+        setError("暂时无法读取已发布内容，请稍后重新加载。");
+        setSyncedAt(undefined);
+        setOnline(false); setFormReady(false);
+      }
+      // The admin workbench reads its own authenticated data. Keep live public
+      // reads for its header/preview, local development, and native registration only.
+      // External questionnaire visitors never contact the Worker.
+      const needsLive = configured && (!import.meta.env.PROD || !!getAdminSession() ||
+        (isNativeJoin() && (!cached.current || cached.current.settings.registration.mode === "internal")));
+      if (!needsLive) return;
+      for (let attempt = 0; attempt < 2 && current(); attempt++) {
         try {
           const capturedAt = Date.now();
-          const value = await apiJson<PublicResponse>("/api/data", undefined, { signal: request.signal });
+          const value = await bounded(signal => apiJson<PublicResponse>("/api/data", undefined, { signal }), 15000);
           const next = createPublicSnapshot(value, capturedAt);
           if (!current()) return;
           if (cached.current && next.settings.revision < cached.current.settings.revision) throw new Error("Older revision");
-          liveSucceeded = true;
-          apply(next);
+          setData({ settings: next.settings, articles: next.articles });
           setOnline(true);
           setFormReady(value.capabilities?.formEditor === true);
           setError("");
+          // Never write live data to the static cache or label it as published.
           return;
-        } catch {
-          if (!current()) return;
-        } finally {
-          clearTimeout(timeout);
-          controller.signal.removeEventListener("abort", cancel);
-        }
+        } catch { /* Retain the last static view. */ }
       }
-    };
-    try {
-      await Promise.all([readStatic(), readLive()]);
       if (!current()) return;
-      if (!liveSucceeded) {
-        if (!cached.current) setData({ settings: normalizeSettings({ registrationOpen: false }), articles: initialArticles });
-        setOnline(false);
-        setFormReady(false);
-        setError(snapshotMessage(cached.current));
+      if (!cached.current) {
+        setData({ settings: normalizeSettings({ registrationOpen: false }), articles: initialArticles });
+        setError("暂时无法连接在线服务，请稍后重新加载。");
       }
+      setOnline(false); setFormReady(false);
     } finally {
       if (current()) {
         activeRead.current = null;
@@ -120,6 +127,9 @@ export function SiteStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
     const unsubscribe = onContentChange(() => { void refresh(); });
+    const unsubscribeAuth = onAuthChange(() => { void refresh(); });
+    const routeChange = () => { void refresh(); };
+    window.addEventListener("hashchange", routeChange);
     // Focus/visibility often fire together; don't duplicate an active request.
     const resume = () => {
       if (document.visibilityState === "visible" && !activeRead.current) void refresh();
@@ -132,6 +142,8 @@ export function SiteStateProvider({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", resume);
     return () => {
       unsubscribe();
+      unsubscribeAuth();
+      window.removeEventListener("hashchange", routeChange);
       window.clearInterval(interval);
       window.removeEventListener("focus", resume);
       window.removeEventListener("online", resume);
@@ -168,7 +180,7 @@ export function SiteStateProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthChange(() => { void check(); });
     return () => { disposed = true; generation++; unsubscribe(); if (expiry) clearTimeout(expiry); };
   }, [configured]);
-  return <PublicContext.Provider value={{ ...data, loading, error, online, configured, formReady, refresh }}><SessionContext.Provider value={session}>{children}</SessionContext.Provider></PublicContext.Provider>;
+  return <PublicContext.Provider value={{ ...data, loading, error, online, configured, formReady, syncedAt, refresh }}><SessionContext.Provider value={session}>{children}</SessionContext.Provider></PublicContext.Provider>;
 }
 
 export function usePublicState() {

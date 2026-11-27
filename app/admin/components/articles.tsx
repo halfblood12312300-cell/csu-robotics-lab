@@ -1,3 +1,4 @@
+import { publicationMessage } from "../publication";
 import { SiteLink } from "../../router";
 import { MediaImage } from "../../media";
 import { useState } from "react";
@@ -55,15 +56,9 @@ export function Articles({
   async function change(a: Article, s: string) {
     setBusy(true);
     try {
-      await api("admin/article", { ...a, status: s });
+      const result = await api("admin/article", { ...a, status: s });
       await onRefresh();
-      notify(
-        s === "archived"
-          ? "文章已移入回收站，可随时恢复为草稿。"
-          : s === "draft"
-            ? "文章已保存为草稿，访客暂不可见。"
-            : "文章已发布",
-      );
+      notify(publicationMessage(result.publication));
     } catch (e) {
       notify((e as Error).message);
     } finally {
@@ -79,9 +74,9 @@ export function Articles({
         persisted={articles.some((a) => a.id === editing.id)}
         assets={assets}
         onUpload={onUpload}
-        onSaved={async () => {
+        onSaved={async (publication) => {
           await onRefresh();
-          notify("文章已保存到网站");
+          notify(publicationMessage(publication));
         }}
         onClose={() => setEditing(null)}
       />

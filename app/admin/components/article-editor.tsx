@@ -62,7 +62,7 @@ export function ArticleEditor({
   persisted: boolean;
   assets: Asset[];
   onUpload: (a: Asset) => void;
-  onSaved: () => Promise<void>;
+  onSaved: (publication: unknown) => Promise<void>;
   onClose: () => void;
   categories: string[];
 }) {
@@ -173,13 +173,13 @@ export function ArticleEditor({
     try {
       if (!a.title.trim()) throw Error("请先填写文章标题");
       const value = { ...a, title: a.title.trim(), status };
-      await api("admin/article", value);
+      const result = await api("admin/article", value);
       try {
         localStorage.removeItem(cacheKey);
       } catch {}
       setSaved(JSON.stringify(value));
       setA(value);
-      await onSaved();
+      await onSaved(result.publication);
       onClose();
     } catch (e) {
       setError((e as Error).message);

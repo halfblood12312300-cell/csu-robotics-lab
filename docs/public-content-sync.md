@@ -1,9 +1,12 @@
-# 公开内容双通道同步
+# 公开网站发布（静态优先）
 
-管理员照常使用网站后台，内容保存到 Cloudflare D1。GitHub Actions 在每次 main 发布、手动运行以及每小时的 07/22/37/52 分钟（UTC）读取公开 /api/data，验证并生成 dist/public-content.json，和网站一起发布。不是把数据库复制进 Git 仓库；没有新增 API Token，也没有 R2。
+公开访客从 GitHub Pages 同源读取 public-content.json；问卷星报名只依赖已发布的问卷链接，不请求 Cloudflare。管理员工作台仍连接 Workers/D1。原生报名模式必须连接实时服务。后台保存数据库成功与 GitHub Pages 部署成功是不同状态。
 
-前台同时尝试同源静态副本和实时 API。实时 API 不可达时，使用最近同步成功的公开内容并显示同步时间。静态副本不会覆盖已确认的新版本。报名、管理员登录及写入必须连接实时 API；静态副本不接收或提交报名。
+每次 main 提交、手动运行、定时任务会读取公开 /api/data、校验并发布静态副本。GitHub 定时任务可能延迟或漏跑，因此新增保存后主动请求发布；原定时任务只作补充。
 
-普通同步间隔 15 分钟，再加 GitHub 构建、部署、缓存及调度延迟。需要尽快更新时：GitHub 仓库 → Actions → Build and deploy CSU Robotics Lab → Run workflow（main）。首次部署或后端暂时无法验证数据时，工作流失败并保留之前的线上发布，不会发布空数据。公开副本只包含公开设置和已发布文章；草稿、名单、令牌及额外字段不进入副本。撤回的内容可能在下次成功发布前继续显示，已下载副本也无法撤回。不要在公开文案中放入隐私信息。
+## 一次性启用保存后发布
+1. 在 GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens 创建令牌，Repository access 只选择 csu-robotics-lab，Repository permissions 仅 Actions: Read and write（Metadata read 自动附带），设置合理有效期。
+2. Cloudflare csu-robotics-api → Settings → Runtime variables and secrets → Production → Add variable，Key 为 GITHUB_PUBLISH_TOKEN，Value 为令牌原文，勾选 Secret，Add variable and deploy。不要把令牌发到聊天或提交仓库。
+3. 后台保存设置或发布/撤回文章会请求 GitHub Actions。也可在网站设置点击“立即同步公开网站”。看到请求已受理不等于部署成功，请检查 Actions。令牌缺失、过期或 API 请求失败时，数据库保存仍有效，可手动在 GitHub Actions → Build and deploy CSU Robotics Lab → Run workflow (main) 发布。
 
-GitHub 官方说明定时任务可能延迟，公开仓库连续 60 天没有活动时可能自动禁用定时任务，请检查 Actions。此方案没有保证中国大陆所有网络的可达性，需在实际设备验证。
+仅已发布文章和公开设置进入副本，不同步报名记录、草稿和令牌。静态副本无法撤回已下载内容。页脚显示实际公开副本的北京时间。外部问卷关闭时请同时在问卷星停止收集。GitHub Pages 可达性和更新速度仍受访问网络和 CDN 影响，不保证所有国内网络。

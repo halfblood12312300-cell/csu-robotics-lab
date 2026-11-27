@@ -6,6 +6,8 @@ export interface Env {
   FRONTEND_BASE_PATH?: string;
   ADMIN_KEY_HASH?: string;
   MEDIA_SIGNING_SECRET?: string;
+  /** Optional fine-grained Actions-only token; kept exclusively in Worker Secrets. */
+  GITHUB_PUBLISH_TOKEN?: string;
 }
 
 export interface AdminSession {

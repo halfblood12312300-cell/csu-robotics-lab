@@ -104,7 +104,7 @@ export function Header({ preview = false }: { preview?: boolean }) {
   );
 }
 export function Footer() {
-  const { settings } = usePublic();
+  const { settings, syncedAt } = usePublic();
   const footer = settings.footer;
   return <footer className="footer wrap">
     <div>
@@ -122,6 +122,7 @@ export function Footer() {
       {footer.links.map((link) => <ContentAction key={link.id} link={link} settings={settings} arrow="none" />)}
       {settings.site.showAdminLink && <SiteLink href="/admin">{footer.adminLabel}<ArrowUpRight size={14} /></SiteLink>}
     </div>
+    {syncedAt && <div className="footer-bottom"><small>公开网站同步时间（北京时间）：{new Date(syncedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}</small></div>}
     {(footer.bottomLeft || footer.bottomRight) && <div className="footer-bottom">
       <small className="cms-lines">{footer.bottomLeft}</small><small className="cms-lines">{footer.bottomRight}</small>
     </div>}
