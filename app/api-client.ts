@@ -3,6 +3,7 @@ import { normalizeRepositoryMediaPath } from "./repository-media-path";
 
 const AUTH_EVENT = "csu-lab-auth-change";
 const CONTENT_EVENT = "csu-lab-content-change";
+const CONTENT_STORAGE_KEY = "csu-lab-content-change-v1";
 type StoredSession = { token: string; expiresAt: number };
 let apiBase = normalizeBase(import.meta.env.VITE_API_BASE_URL || "");
 let memorySession: StoredSession | null = null;
@@ -71,17 +72,29 @@ export function onAuthChange(listener: () => void) {
   window.addEventListener(AUTH_EVENT, listener);
   return () => window.removeEventListener(AUTH_EVENT, listener);
 }
-export function notifyContentChanged() { window.dispatchEvent(new Event(CONTENT_EVENT)); }
+export function notifyContentChanged() {
+  window.dispatchEvent(new Event(CONTENT_EVENT));
+  try { localStorage.setItem(CONTENT_STORAGE_KEY, Date.now() + ":" + Math.random()); } catch {}
+}
 export function onContentChange(listener: () => void) {
+  const crossTab = (event: StorageEvent) => {
+    if (event.key === CONTENT_STORAGE_KEY) listener();
+  };
   window.addEventListener(CONTENT_EVENT, listener);
-  return () => window.removeEventListener(CONTENT_EVENT, listener);
+  window.addEventListener("storage", crossTab);
+  return () => {
+    window.removeEventListener(CONTENT_EVENT, listener);
+    window.removeEventListener("storage", crossTab);
+  };
 }
 
 export async function apiFetch(path: string, init: RequestInit = {}) {
   if (!apiBase) throw new Error("在线服务暂未启用。");
   if (!/^\/api(?:\/|$)/.test(path) || /[\r\n\\]/.test(path)) throw new Error("请求地址无效。");
   const headers = new Headers(init.headers);
-  const session = getAdminSession();
+  // Public content must not need an authenticated CORS preflight, even in an admin tab.
+  const publicRead = path === "/api/data" && ["GET", "HEAD"].includes((init.method || "GET").toUpperCase());
+  const session = publicRead ? null : getAdminSession();
   if (session) headers.set("Authorization", `Bearer ${session.token}`);
   else headers.delete("Authorization");
   let response: Response;
